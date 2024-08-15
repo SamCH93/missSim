@@ -1,0 +1,92 @@
+---
+title: "miss-sim"
+subtitle: "Randomizing papers for agreement assessment"
+author: "Björn S. Siepe"
+date: "15 August 2024"
+format:
+  html:
+    toc: true
+    number-sections: true
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+    code-summary: "Show the code"
+    fig-width: 7
+    fig-height: 4.5
+execute:
+  message: false
+  warning: false
+---
+
+# Background
+This document contains code to randomize papers from the literature review to assess agreement between different raters
+
+# Prep
+
+Load the data and the tidyverse packages: 
+```{r}
+set.seed(2024)
+library(tidyverse)
+
+# Load the data
+
+
+```
+
+
+# Randomize papers
+
+As we preregistered:
+
+> Fifty studies will be coded in duplicate by a second coder. We will start with the studies that have received the lowest confidence rating (and randomly break ties). 
+
+```{r}
+# with made-up data for now
+df <- data.frame(
+  reviewer = sample(c("AL", "SP", "FB", "BS"), 200, replace = TRUE),
+  # generate mock dois
+  doi = paste0("10.1234/", sample(letters, 200, replace = TRUE), sample(letters, 200, replace = TRUE), sample(letters, 200, replace = TRUE)),
+  Q7_coding_confidence = sample(c("low", "medium", "high"), 200, replace = TRUE)
+)
+coders <- unique(df$reviewer)
+
+# start with low certainty
+low_cert <- df[df$Q7_coding_confidence == "low", ]
+
+# Step 2: Check if the number of "low" certainty rows is less than 50
+if (nrow(low_cert) < 50) {
+  # Step 3: If less than 50, get additional rows with "medium" certainty
+  rows_needed <- 50 - nrow(low_cert)
+  medium_cert <- df[df$Q7_coding_confidence == "medium", ]
+  
+  # Step 4: Randomly sample the required number of "medium" certainty rows
+  add_sample <- medium_cert[sample(1:nrow(medium_cert), rows_needed), ]
+  
+  # Step 5: Combine the "low" certainty rows with the sampled "medium" certainty rows
+  final_sample <- rbind(low_cert, add_sample)
+} else {
+  # if there are 50 or more "low" certainty rows
+  final_sample <- low_cert[sample(1:nrow(low_cert), 50), ]
+}
+
+# randomize the new coder in a new column
+final_sample$new_coder <- sapply(final_sample$reviewer, function(x) {
+   sample(setdiff(coders, x), 1)
+})
+```
+
+Check the number of papers each coder has to code:
+```{r}
+final_sample %>%
+  group_by(reviewer) %>%
+  summarise(n = n())
+```
+
+Create a list of DOIs for each individual coder:
+```{r}
+final_sample %>%
+  group_by(reviewer) %>%
+  summarise(dois = paste(doi, collapse = ", "))
+```
+
+
