@@ -1,0 +1,827 @@
+---
+title: "Preliminary analysis"
+author: "Samuel Pawel, Björn Siepe, František Bartoš"
+date: "11 August 2023"
+output:
+  pdf_document: default
+  # html_document:
+  #   df_print: paged
+---
+
+# Visualizations
+
+
+```{r fig.align = "center", fig.height = 5, fig.width = 10}
+## libraries
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(colorspace)
+library(ggpubr)
+library(stringr)
+library(forcats)
+library(knitr)
+library(kableExtra)
+library(sysfonts)
+library(showtext)
+library(here)
+library(Hmisc)
+# devtools::install_github("kupietz/kableExtra")
+
+theme_set(theme_bw() +
+          theme(legend.position = "top",
+                panel.grid.minor = element_blank()))
+## pal <- "Harmonic" # change palette here
+## ## colorspace::hcl_palettes("qualitative", plot = TRUE)
+cols <- c("BRM" = "#E69F00", "MBR" = "#009E73", "PM" = "#0072B2")
+# cols <- c("BRM" = "#E69F00", "MBR" = "#56B4E9", "PM" = "#009E73")
+
+# Alternative font
+theme_bs <- function(){
+  # add google font
+  sysfonts::font_add_google("News Cycle", "news")
+  # use showtext
+  showtext::showtext_auto()
+  # theme
+  ggplot2::theme_bw(base_family = "news") + 
+  ggplot2::theme(
+    legend.position = "top",
+    panel.grid.minor = element_blank(),
+    
+    # Title and Axis Texts
+    plot.title = ggplot2::element_text(size = ggplot2::rel(1.2), hjust = 0.5),
+    plot.subtitle = ggplot2::element_text(size = ggplot2::rel(1.1), hjust = 0.5),
+    axis.title = ggplot2::element_text(size = ggplot2::rel(1.2)),
+    axis.text = ggplot2::element_text(size = ggplot2::rel(1.25)),
+    axis.text.x = ggplot2::element_text(margin = ggplot2::margin(5, b = 10))
+  )
+}
+theme_set(theme_bs())
+
+
+## data
+sim_res_fac_full <- readRDS(file = here("data/sim_res_fac.RDS"))
+sim_res_num_full <- readRDS(file = here("data/sim_res_num.RDS"))
+
+# subset assessment only
+sim_res_fac  <- sim_res_fac_full %>%
+    filter(simstudy_q1 == "yes",
+           coding_type == "assessment")
+sim_res_num  <- sim_res_num_full %>%
+    filter(simstudy_q1 == "yes",
+           coding_type == "assessment")
+
+## proportion of simulation studies by journal
+sim_res_fac_full %>%
+    filter(coding_type == "assessment" | is.na(coding_type)) %>%
+    group_by(journal) %>%
+    dplyr::summarize(propSim = mean(simstudy_q1 == "yes"),
+              n = n()) %>%
+    mutate(journalLab = paste0(journal, " (n = ", n, ")")) %>%
+    ggplot(aes(x = journalLab, y = propSim)) +
+    geom_bar(stat = "identity", col = 1) +
+    scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+    labs(x = NULL, title ="Journal", y = "Proportion of simulation studies") +
+    theme(panel.grid.major.x = element_blank())
+
+sim_res_fac_full %>%
+    filter(coding_type == "assessment" | is.na(coding_type),
+           year == 2022) %>%
+    dplyr::summarize(propSim = mean(simstudy_q1 == "yes"),
+              sim = sum(simstudy_q1 == "yes"),
+              n = n())
+sim_res_fac_full %>%
+    filter(coding_type == "assessment" | is.na(coding_type),
+           year == 2022) %>%
+    group_by(journal) %>%
+    dplyr::summarize(propSim = mean(simstudy_q1 == "yes"),
+              sim = sum(simstudy_q1 == "yes"),
+              n = n())
+## Morris et al. (2019) find
+## "264 articles of which 199 (75\%) included at least one simulation study"
+
+
+## year
+ggplot(data = sim_res_fac, aes(x = factor(year))) +
+    geom_bar(col = 1) +
+    labs(x = NULL, title ="Year") +
+    theme(panel.grid.major.x = element_blank())
+
+## journal
+ggplot(data = sim_res_fac, aes(x = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, title ="Journal") +
+    theme(panel.grid.major.x = element_blank())
+
+## reviewer
+ggplot(data = sim_res_fac, aes(x = reviewer)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, title ="Reviewer") +
+    theme(panel.grid.major.x = element_blank())
+
+## Q2 number of simulation studies
+# scale max for plot
+q2_plot_max <- max(table(sim_res_fac$nsimstudies_q2)) + 5
+
+q2 <- ggplot(data = sim_res_fac, aes(x = nsimstudies_q2, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, title ="Number of simulation studies in article", fill = "Journal") +
+    # scale_fill_discrete_qualitative(palette = pal) + 
+    scale_fill_manual(values = cols) +
+    scale_y_continuous(limits = c(0, q2_plot_max), expand = c(0,0))+
+    theme(panel.grid.major.x = element_blank())+
+    labs(y = NULL)
+q2
+
+## Q3 are the aims of the study defined
+q3 <- sim_res_fac %>%
+    mutate(aimsdefined_q3 = factor(aimsdefined_q3,
+                                   levels = c("yes", "no", "unclear"))) %>%
+ggplot(aes(x = aimsdefined_q3, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, title ="Aims of the study defined?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    theme(panel.grid.major.x = element_blank())
+q3
+
+## Q4 type of DGP
+q4_plot_max <- max(table(sim_res_fac$dgptype_q4)) + 5
+
+q4 <- sim_res_fac %>%
+    mutate(dgptype_q4 = factor(dgptype_q4,
+                               levels = c("parametric thin-air",
+                                          "parametric based on actual data",
+                                          "resampled"),
+                               labels = c("parametric \ncustomized",
+                                        #"parametric \nthin-air",
+                                          "parametric \nbased on data",
+                                          "resampled"))) %>% 
+    mutate(dgptype_q4 = reorder(dgptype_q4, dgptype_q4, length, decreasing = TRUE)) %>% 
+    ggplot(aes(x = dgptype_q4, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, y = NULL, title ="Type of data-generating mechanism", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    scale_y_continuous(limits = c(0, q4_plot_max), expand = c(0,0))+
+    theme(panel.grid.major.x = element_blank())
+q4
+
+## from Morris: "97 simulation studies used some form of parametric model to
+## generate data while three used resampling methods. Of the 97 that simulated
+## from a parametric model, 27 based parameter values on data, one based
+## parameter values partly on data, and the remaining 69 on no data. Of these
+## 97, 91 (94\%) provided the parameters used." (p. 2079)
+
+
+## Q5 DGP parameters provided?
+q5 <- sim_res_fac %>%
+    mutate(dgpparameters_q5 = factor(dgpparameters_q5,
+                                   levels = c("yes", "no", "unclear"))) %>%
+ggplot(aes(x = dgpparameters_q5, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, title ="Are DGP parameters provided?", fill = "Journal") +
+    scale_fill_manual(values = cols) +
+    theme(panel.grid.major.x = element_blank())
+q5
+
+## Q6 How many conditions?
+summary(sim_res_num$nconds_q6)
+breaks <- c(1, 10, 100, 1000, 10000)
+labels <- c("1^phantom(1)", "10^1", "10^2", "10^3", "10^4")
+q6 <- ggplot(data = sim_res_num, aes(x = log(nconds_q6), fill = journal)) +
+    geom_histogram(breaks = seq(0, log(10000), 0.5), col = 1) +
+    scale_x_continuous(breaks = log(breaks), labels = parse(text = labels)) +
+    scale_y_continuous(breaks = seq(0, 12, 2), limits = c(0,13), expand = c(0,0)) +
+    scale_fill_manual(values = cols) +
+    labs(x = NULL, y = NULL, 
+         title ="How many simulation conditions?", fill = "Journal")
+q6
+
+## Q7 How many factors?
+q7a_plot_max <- max(table(sim_res_fac$factorsvaried_q7)) + 5
+
+q7a <- sim_res_num %>%
+    mutate(factorsvaried_q7_fac = ifelse(is.na(factorsvaried_q7),
+                                         "unclear", factorsvaried_q7)) %>%
+    ggplot(aes(x = factorsvaried_q7_fac, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, y = NULL, 
+         title ="How many factors varied?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    scale_y_continuous(limits = c(0, q7a_plot_max), expand = c(0,0))+
+    theme(panel.grid.major.x = element_blank())
+q7a
+
+## Q7 Fully factorial?
+q7b_plot_max <- max(table(sim_res_fac$dgmfactorial_q7)) + 5
+
+q7b <- sim_res_fac %>%
+    mutate(dgmfactorial_q7 = factor(dgmfactorial_q7,
+                                    levels = c("fully-factorial",
+                                               "one-at-a-time",
+                                               "partially-factorial"),
+                                    # changed labels here after introduction of terminology "scattershot"
+                                    labels = c("fully\nfactorial",
+                                               "Scattershot",
+                                               "partially/\none-at-a-time"))) %>% 
+    mutate(dgmfactorial_q7 = reorder(dgmfactorial_q7, dgmfactorial_q7, 
+                                     length, decreasing = TRUE)) %>% 
+    ggplot(aes(x = dgmfactorial_q7, fill = journal)) + 
+    geom_bar(col = 1) +
+    labs(x = NULL, y = NULL,
+         title ="How are factors varied?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    scale_y_continuous(limits = c(0, q7b_plot_max), expand = c(0,0))+
+    theme(panel.grid.major.x = element_blank())
+q7b
+
+## # double check consistency here: how was a single varied factor treated?
+## sim_res_fac %>% 
+##   filter(factorsvaried_q7 == 1) %>% 
+##   select(reviewer, factorsvaried_q7, dgmfactorial_q7) %>% 
+##   View()
+
+
+## Q8 How many repetitions?
+summary(sim_res_num$nsim_q8)
+breaks <- c(1, 10, 100, 1000, 10000, 100000, 1000000)
+labs <- c("1^phantom(1)", "10^1", "10^2", "10^3", "10^4", "10^5", "10^6")
+q8 <- ggplot(data = sim_res_num, aes(x = log(nsim_q8), fill = as.factor(journal))) +
+    geom_histogram(breaks = seq(0, log(2000000), 0.5), col = 1) +
+    labs(x = NULL, y = NULL, 
+         title ="How many repetitions?", fill = "Journal") +
+    scale_x_continuous(breaks = log(breaks), labels = parse(text = labs)) +
+    scale_fill_manual(values = cols) +
+    scale_y_continuous(limits = c(0,33), expand = c(0,0))
+q8
+
+## Q9 Are the number of repetitions justified?
+q9_plot_max <- max(table(sim_res_fac$nsimjustified_q9)) + 5
+
+q9 <- ggplot(data = sim_res_fac, aes(x = nsimjustified_q9, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, y = NULL,
+         title = "Are the number of repetitions explicitly justified?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    scale_y_continuous(limits = c(0, q9_plot_max), expand = c(0,0))+
+    theme(panel.grid.major.x = element_blank())
+q9
+
+## Q10 Is the estimand stated?
+q10 <- ggplot(data = sim_res_fac, aes(x = estimandstated_q10, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, y = NULL,
+        title ="Is the estimand stated?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    theme(panel.grid.major.x = element_blank())
+q10
+
+## Q11 How many estimands?
+summary(sim_res_num$nestimands_q11)
+breaks <- c(1, 3, 10, 30, 100, 300)
+q11 <- ggplot(data = sim_res_num, aes(x = log(nestimands_q11), fill = journal)) +
+    geom_histogram(breaks = seq(0, log(500), 0.4), col = 1) +
+    scale_x_continuous(breaks = log(breaks), labels = breaks) +
+    scale_y_continuous(limits = c(0, 23), expand = c(0,0))+ 
+    scale_fill_manual(values = cols) + 
+    labs(x = NULL, y = NULL,
+         title ="How many estimands?", fill = "Journal")
+q11
+
+## Q12 Are estimands aggregated?
+q12 <- ggplot(data = sim_res_fac, aes(x = estimandsagg_q12, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, title ="Are estimands aggregated?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    theme(panel.grid.major.x = element_blank())
+q12
+
+## Q13 How are the true parameters specified?
+q13 <- ggplot(data = sim_res_fac, aes(x = truetheta_q13, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, y = NULL,
+         title ="How are the true parameters specified?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    theme(panel.grid.major.x = element_blank())
+q13
+
+## Q14 How many methods are included?
+summary(sim_res_num$nmethods_q14)
+q14_plot_max <- max(table(sim_res_fac$nmethods_q14)) + 3
+
+q14 <- ggplot(data = sim_res_num, aes(x = factor(nmethods_q14), fill = journal)) +
+    geom_bar(col = 1) +
+    ## scale_x_continuous(breaks = seq(1, 14), limits = c(0.5, 14.5)) +
+    labs(x = NULL, y = NULL, title ="How many methods are included?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    scale_y_continuous(limits = c(0, q14_plot_max), expand = c(0,0))+
+    theme(panel.grid.major.x = element_blank())
+q14
+
+## Q15 What is the evaluation target of the simulation?
+q15_plot_max <- max(table(sim_res_fac$target_q15)) + 5
+
+q15a <- sim_res_fac %>% 
+    mutate(target_q15 = as.factor(target_q15)) %>% 
+    mutate(target_q15 = reorder(target_q15, target_q15, length)) %>% 
+    mutate(target_q15 = gsub("model selection", "model\nselection", target_q15)) %>% 
+    ggplot(aes(x = target_q15, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, y = NULL, title ="What is the statistical task?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    scale_y_continuous(limits = c(0, q15_plot_max), expand = c(0,0))+
+    theme(panel.grid.major.y = element_blank()) +
+    coord_flip()
+q15a
+
+# to keep it consistent with other questions, also spread apart results here
+q15a_new <- sim_res_fac %>% 
+    separate_wider_delim(target_q15, 
+                       delim = ",",
+                       names_sep = "_", 
+                       too_few = "align_start") %>% 
+    pivot_longer(cols = contains("target"),
+               names_to = NULL,
+               values_to = "target",
+               values_drop_na = TRUE) %>% 
+    mutate(target = str_trim(target)) %>% 
+    mutate(target = gsub("model selection", "model\nselection", target)) %>% 
+    mutate(target = gsub("testing", "hypothesis\ntesting", target)) %>% 
+    mutate(target = as.factor(target)) %>% 
+    mutate(target = reorder(target, target, length)) %>% 
+    ggplot(aes(x = target, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, y = NULL, title ="What is the statistical task?", 
+         fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    scale_y_continuous(limits = c(0, q15_plot_max + 10), expand = c(0,0))+
+    theme(panel.grid.major.y = element_blank()) +
+    coord_flip()
+
+q15a_new
+
+## Q15 Which performance measures were used?
+# Spread "Other" apart
+q15_other <- sim_res_fac %>% 
+  separate_wider_delim(pmother_q15, 
+                       delim = ",",
+                       names_sep = "_", 
+                       too_few = "align_start") %>% 
+  pivot_longer(cols = contains("pmother"),
+               names_to = NULL,
+               values_to = "pmother",
+               values_drop_na = TRUE) %>% 
+  dplyr::select(pmother, journal) %>%
+  # remove whitespace
+  mutate(pmother = str_trim(pmother)) %>% 
+  mutate(pmother = str_replace(pmother, ".*correlation.*", "Correlation")) %>%
+  # mutate(pmother = str_replace(pmother, ".*standard deviation.*", "SD")) %>%
+  mutate(pmother = str_replace(pmother, ".*bias.*", "Bias")) %>%
+  mutate(pmother = as.factor(pmother)) %>% 
+  mutate(pmother = forcats::fct_lump_n(pmother, 2)) %>% 
+  group_by(journal) %>% 
+  count(pmother) %>% 
+  rename(PM = pmother,
+         count = n)
+
+# Visualize
+q15b <- sim_res_fac %>%
+    group_by(journal) %>%
+    summarise("Convergence" = sum(pmconvergence_q15 == "yes"),
+              "Bias" = sum(pmbias_q15 == "yes"),
+              "Empirical SE" = sum(pmempse_q15 == "yes"),
+              "(R)MSE" = sum(pm_r_mse_q15 == "yes"),
+              "Coverage" = sum(pmcover_q15 == "yes"),
+              "Type I error" = sum(pmtypeierror_q15 == "yes"),
+              "Power" = sum(pmpower_q15 == "yes"),
+              "CI width" = sum(pmciwidth_q15 == "yes")) %>%
+    gather(key = "PM", value = "count", "Convergence", "Bias", "(R)MSE", 
+           "Empirical SE", "Coverage", "Type I error", 
+           "Power", "CI width") %>%
+    bind_rows(q15_other) %>% 
+    mutate(PM = as.factor(PM)) %>% 
+    mutate(PM = reorder(PM, count, sum)) %>%
+    group_by(journal, PM) %>%
+    summarise(count = sum(count)) %>%
+    ggplot(aes(x = PM, y = count, fill = journal)) +
+    geom_bar(stat = "identity", col = 1) +
+    labs(x = NULL, 
+         y = NULL,
+         title ="Performance measure", 
+         fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    scale_y_continuous(limits = c(0,70), expand = c(0,0),
+                       breaks = c(20, 40, 60))+
+    theme(panel.grid.major.y = element_blank()) +
+    coord_flip()
+q15b
+
+# Double check if absolute/relative bias ever occur with bias rated as "no"
+sim_res_fac %>% 
+  separate_wider_delim(pmother_q15, 
+                       delim = ",",
+                       names_sep = "_", 
+                       too_few = "align_start") %>% 
+  pivot_longer(cols = contains("pmother"),
+               names_to = NULL,
+               values_to = "pmother",
+               values_drop_na = TRUE) %>% 
+  mutate(pmother = str_trim(pmother)) %>% 
+  # mutate(pmother = str_replace(pmother, ".*bias.*", "bias")) %>% 
+  filter(grepl("bias", pmother)) %>% 
+  dplyr::select(reviewer, pmbias_q15, pmother)
+
+# What is included in "Standard Deviation"?
+sim_res_fac %>% 
+  separate_wider_delim(pmother_q15, 
+                       delim = ",",
+                       names_sep = "_", 
+                       too_few = "align_start") %>% 
+  pivot_longer(cols = contains("pmother"),
+               names_to = NULL,
+               values_to = "pmother",
+               values_drop_na = TRUE) %>% 
+  mutate(pmother = str_trim(pmother)) %>% 
+  # mutate(pmother = str_replace(pmother, ".*bias.*", "bias")) %>% 
+  filter(grepl("standard deviation", pmother)) %>% 
+  dplyr::select(pmother)
+
+
+## Q16 Is Monte Carlo uncertainty reported anywhere?
+q16_plot_max <- max(table(sim_res_fac$mcerrors_q16)) + 10
+
+q16 <- sim_res_fac %>%
+  separate_wider_delim(mcerrors_q16, 
+                       delim = ",",
+                       names_sep = "_", 
+                       too_few = "align_start") %>% 
+  pivot_longer(cols = contains("mcerrors"),
+               names_to = NULL,
+               values_to = "mcerrors",
+               values_drop_na = TRUE) %>% 
+  mutate(mcerrors = str_trim(mcerrors)) %>% 
+  mutate(mcerrors = gsub("boxplot", "plot", mcerrors)) %>% 
+  mutate(mcerrors = gsub("quantile plots", "plot", mcerrors)) %>% 
+  mutate(mcerrors = gsub("figures", "plot", mcerrors)) %>% 
+  mutate(mcerrors = gsub("tables", "table", mcerrors)) %>%
+  mutate(mcerrors = as.factor(mcerrors)) %>% 
+  mutate(mcerrors = reorder(mcerrors, mcerrors, length)) %>% 
+  ggplot(aes(x = mcerrors, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, y = NULL, 
+         title ="Is Monte Carlo uncertainty reported anywhere?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    theme(panel.grid.major.x = element_blank()) +
+    scale_y_continuous(limits = c(0, q16_plot_max), expand = c(0,0))+
+    coord_flip()
+q16
+
+
+# Same plot, only yes/no
+q16_yn <- sim_res_fac %>%
+  mutate(mcerrors_q16 = ifelse(mcerrors_q16 == "nowhere",
+                               "no",
+                               "yes")) %>% 
+  mutate(mcerrors_q16 = as.factor(mcerrors_q16)) %>% 
+  # mutate(mcerrors_q16 = reorder(mcerrors_q16, mcerrors_q16, length)) %>% 
+  ggplot(aes(x = mcerrors_q16, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, y = NULL,
+         title ="Is Monte Carlo uncertainty reported anywhere?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    theme(panel.grid.major.x = element_blank()) +
+    scale_y_continuous(limits = c(0, q16_plot_max), expand = c(0,0))
+    # coord_flip()
+q16_yn
+
+
+
+
+## Q17 In which way are the results reported?
+q17 <- sim_res_fac %>%
+    group_by(journal) %>%
+    summarise("Figure" = sum(resultsfigure_q17 == "yes"),
+              "Table" = sum(resultstable_q17 == "yes"),
+              "Text" = sum(resultstext_q17 == "yes"),
+              "Other" = sum(resultsother_q17 == "yes")) %>%
+    gather(key = "Type", value = "count", "Figure", "Table", "Text", "Other") %>%
+    # omit "Other" category for plot
+    filter(Type != "Other") %>% 
+    mutate(Type = as.factor(Type)) %>% 
+    mutate(Type = reorder(Type, count, sum, decreasing = TRUE)) %>% 
+    ggplot(aes(x = Type, y = count, fill = journal)) +
+    geom_bar(stat = "identity", col = 1) +
+    labs(x = NULL, y = NULL,
+         title ="In which way are the results reported?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    scale_y_continuous(limits = c(0,100), expand = c(0,0))+ 
+    theme(panel.grid.major.x = element_blank())
+q17
+
+## Q18 Which software was used to conduct the simulation?
+q18_plot_max <- max(table(sim_res_fac$software_1_q18)) + 10
+q18a <- ggplot(data = sim_res_fac, aes(x = software_1_q18, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, y = NULL,
+         title ="Which primary software was used?", fill = "Journal") +
+    scale_y_continuous(limits = c(0, q18_plot_max), expand = c(0,0))+
+    scale_fill_manual(values = cols) + 
+    theme(panel.grid.major.y = element_blank()) +
+    coord_flip()
+q18a
+
+# add information from software_2_q18 and software_3_q18
+q18b <- sim_res_fac %>% 
+  dplyr::select(starts_with("software"), journal) %>% 
+  pivot_longer(cols = starts_with("software"),
+               names_to = NULL,
+               values_to = "software",
+               values_drop_na = TRUE) %>% 
+  mutate(software = as.factor(software)) %>% 
+  mutate(software = reorder(software, software, length)) %>% 
+  ggplot(aes(x = software, fill = journal)) +
+  geom_bar(col = 1) +
+  labs(x = NULL, y = NULL, title ="Which software was used?", fill = "Journal") +
+  scale_fill_manual(values = cols) + 
+  scale_y_continuous(limits = c(0, q18_plot_max), expand = c(0,0))+
+  theme(panel.grid.major.y = element_blank()) +
+  coord_flip()
+q18b
+
+## Q19 Are there userwritten commands/packages/macros?
+q19 <- ggplot(data = sim_res_fac, aes(x = userwritten_q19, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, title ="Are there userwritten commands/packages/macros?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    theme(panel.grid.major.x = element_blank())
+q19
+
+## Q20 Is code provided?
+q20_plot_max <- max(table(sim_res_fac$codeprovided_q20)) + 5
+
+# Reordered this such that negative is on the left to stay consistent
+q20 <- sim_res_fac %>% 
+    mutate(codeprovided_q20 = as.factor(codeprovided_q20)) %>% 
+    mutate(codeprovided_q20 = reorder(codeprovided_q20, codeprovided_q20, 
+                                      length, decreasing = TRUE)) %>% 
+    ggplot(aes(x = codeprovided_q20, fill = journal)) +
+    geom_bar(col = 1, col = 1) +
+    labs(x = NULL, y = NULL, title ="Is code provided?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    scale_y_continuous(limits = c(0, q20_plot_max), expand = c(0,0))+
+    theme(panel.grid.major.x = element_blank())
+q20
+
+## Q21 If code is provided, is a seed provided?
+q21 <- ggplot(data = sim_res_fac, aes(x = seedprovided_q21, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, title ="If code is provided, is a seed provided?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    theme(panel.grid.major.x = element_blank())
+
+
+# Compute as conditional on code provided
+q21 <- sim_res_fac %>% 
+  filter(codeprovided_q20 == "accessible online") %>% 
+  ggplot(aes(x = seedprovided_q21, fill = journal))+
+  geom_bar(col = 1)+
+  labs(x = NULL,
+       y = NULL,
+       title ="If code is provided, is a seed provided?", fill = "Journal") +
+    scale_fill_manual(values = cols) + 
+    theme(panel.grid.major.x = element_blank())
+sim_res_fac %>% 
+     filter(codeprovided_q20 == "accessible online") %>% 
+     count(seedprovided_q21)
+q21
+
+## Q22 Is information on the computational environment provided?
+q22_plot_max <- max(table(sim_res_fac$compenvironment_q22)) + 7
+
+q22 <- sim_res_fac %>%
+    mutate(compenvironment_q22 = factor(compenvironment_q22,
+                                        levels = c("no", "minimal", "partially", "fully"))) %>%
+    ggplot(aes(x = compenvironment_q22, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, y = NULL,
+         title ="Is information on computational environment provided?",
+         fill = "Journal")  +
+    scale_fill_manual(values = cols) + 
+    scale_y_continuous(limits = c(0, q22_plot_max), expand = c(0,0)) +
+    theme(panel.grid.major.x = element_blank())
+q22
+
+## Q23 Is information on the operating system provided?
+q23 <- sim_res_fac %>%
+    mutate(compos_q23 = factor(compos_q23,
+                               levels = c("no", "partially", "fully"))) %>%
+    ggplot(aes(x = compos_q23, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, y = NULL,
+         title ="Is information on the operating system provided?",
+         fill = "Journal")  +
+    scale_fill_manual(values = cols) + 
+    theme(panel.grid.major.x = element_blank())
+q23
+
+## Q24 How confident was reviewer in coding of the article?
+q24 <- sim_res_fac %>%
+    mutate(coding_confidence = factor(coding_confidence,
+                               levels = c("poor", "medium", "great"))) %>%
+    ggplot(aes(x = coding_confidence, fill = journal)) +
+    geom_bar(col = 1) +
+    labs(x = NULL,
+         y = NULL,
+         title ="How confident was reviewer in coding of the article?",
+         fill = "Journal")  +
+    scale_fill_manual(values = cols) + 
+    theme(panel.grid.major.x = element_blank())
+q24
+```
+
+
+
+```{r "fig1", fig.height = 7, fig.width = 10.5, warning=FALSE}
+## composite plot 1 - problematic questions
+plotList1 <- lapply(X = list(q9, q16_yn, q20, q22),
+                   ## this plot requires a different title size
+                   FUN = function(plot) {
+                     plot+
+                       scale_y_continuous(limits = c(0, 105), expand = c(0,0)) +
+                         theme(axis.text.x = element_text(size = rel(1.2)),
+                               plot.title = element_text(size = rel(1.35)),
+                               legend.title = element_text(size = rel(1.6)),
+                               legend.text = element_text(size = rel(1.6)),
+                               legend.spacing = unit(1.5, "cm")) 
+                   })
+fig1 <- ggpubr::ggarrange(plotlist = plotList1, labels = LETTERS[1:4], ncol = 2, nrow = 2,
+                  common.legend = TRUE, align = "h")
+ggsave("fig1.pdf", fig1, path = here("figures/"), width = 10.5, height = 7)
+```
+
+
+
+```{r "fig2", fig.height = 15, fig.width = 18, warning=FALSE}
+## composite plot 2 - descriptives
+plotList2 <- lapply(X = list(q2, q4, q6, q7a, q7b, q8, q14, 
+                            q15a_new, q11, q15b, q17, q18b),
+                   ## this plot requires a different title size
+                   FUN = function(plot) {
+                     plot +
+                         theme(axis.text.x = element_text(size = rel(1.4)),
+                               axis.text.y = element_text(size = rel(1.2)),
+                               axis.title = element_text(size = rel(1.4)),
+                               plot.title = element_text(size = rel(2)),
+                               legend.title = element_text(size = rel(2.2)),
+                               legend.text = element_text(size = rel(2.2)),
+                               legend.spacing = unit(1.5, "cm")) 
+                   })
+names <- LETTERS[1:length(plotList2)]
+fig2 <- ggpubr::ggarrange(plotlist = plotList2, labels = names,
+                          ncol = 3, nrow = 4, common.legend = TRUE, align = "h",
+                          font.label = list(size = 18, color = "black", face = "bold",
+                                            family = NULL))
+## fig2
+scale <- 0.94
+ggsave("fig2.pdf", fig2, path = here("figures/"), width = scale*17, height = scale*22)
+
+```
+
+# Descriptives
+Show descriptives grouped by journal, then ungrouped.
+```{r}
+# detailed per-journal descriptives
+journal_describe <- sim_res_fac %>% 
+  split(.$journal) %>% 
+  purrr::map(~Hmisc::describe(.x))
+
+
+# In a tidy way for long summary table
+summary_vars <- c(
+  "reviewer", "simstudy_q1",
+  "nsimstudies_q2", "whichsim", "aimsdefined_q3",
+  "dgptype_q4", 
+  # "dgpparameters_q5", 
+  # "nconds_q6", 
+  "factorsvaried_q7", "dgmfactorial_q7", 
+  # "nsim_q8", 
+  "nsimjustified_q9",
+  "estimandstated_q10", 
+  # "nestimands_q11",
+  "estimandsagg_q12", "truetheta_q13", 
+  "nmethods_q14",
+  "target_q15",
+  "pmconvergence_q15", "pmbias_q15", "pmempse_q15", "pm_r_mse_q15",
+  "pmcover_q15", "pmtypeierror_q15", "pmpower_q15", "pmciwidth_q15",
+  "pmsclear_q15", "mcerrors_q16",
+  "resultsfigure_q17", "resultstable_q17", "resultstext_q17",
+  "resultsother_q17", "software_1_q18", "software_2_q18",
+  "software_3_q18", "software", "userwritten_q19", 
+  "codeprovided_q20",  "seedprovided_q21",
+  "compenvironment_q22", "compos_q23", 
+  "coding_confidence"
+)
+
+
+sim_res_fac %>% 
+  as.data.frame() %>% 
+  group_by(journal) %>% 
+  pivot_longer(cols = starts_with("software"),
+               names_to = NULL,
+               values_to = "software",
+               values_drop_na = TRUE) %>% 
+  mutate(software = as.factor(software)) %>% 
+  pivot_longer(cols = any_of(summary_vars),
+               names_to = "col", values_to = "response") %>% 
+  select(doi, journal, col, response) %>% 
+  # get distinct responses per paper %>% 
+  group_by(doi, col) %>% 
+  distinct(response, .keep_all = TRUE) %>% 
+  ungroup() %>% 
+  group_by(journal, col) %>% 
+  count(response) %>% 
+  # filter(!is.na(response)) %>% 
+  # View()
+  pivot_wider(id_cols = c(col, response),
+              names_from = journal, 
+              values_from = n,
+              values_fill = 0) %>% 
+  arrange(factor(col, levels = summary_vars)) %>%
+  rowwise() %>% 
+  mutate(Sum = sum(BRM, MBR, PM)) %>% 
+  knitr::kable("latex", longtable = TRUE, caption = "Grouped by Journal") %>% 
+  kableExtra::column_spec(1, bold = TRUE) %>% 
+  kableExtra::collapse_rows(columns = 1:2, valign = "top")
+
+
+# Ungrouped and with proportions
+sim_res_fac %>% 
+  as.data.frame() %>% 
+  # pivot_longer(cols = starts_with("software"),
+  #              names_to = NULL,
+  #              values_to = "software",
+  #              values_drop_na = TRUE) %>% 
+  # mutate(software = as.factor(software)) %>% 
+  pivot_longer(cols = any_of(summary_vars),
+               names_to = "col", values_to = "response") %>% 
+  select(col, response) %>% 
+  group_by(col) %>% 
+  count(response) %>% 
+  arrange(factor(col, levels = summary_vars)) %>%
+  knitr::kable("latex", longtable = TRUE, caption = "Ungrouped") %>% 
+  kableExtra::column_spec(1, bold = TRUE) %>% 
+  kableExtra::collapse_rows(columns = 1:2, valign = "top")
+
+
+  
+```
+
+Analyses of individual questions: 
+```{r}
+# Q8:
+sim_res_num$nsim_q8 %>% 
+  table()
+
+
+# Q15a:
+sim_res_fac %>% 
+    separate_wider_delim(target_q15, 
+                       delim = ",",
+                       names_sep = "_", 
+                       too_few = "align_start") %>% 
+    pivot_longer(cols = contains("target"),
+               names_to = NULL,
+               values_to = "target",
+               values_drop_na = TRUE) %>% 
+    mutate(target = str_trim(target)) %>% 
+    mutate(target = as.factor(target)) %>% 
+    count(target) %>% 
+    arrange(desc(n))
+
+# Q15:
+sim_res_fac %>%
+    group_by(journal) %>%
+    summarise("Convergence" = sum(pmconvergence_q15 == "yes"),
+              "Bias" = sum(pmbias_q15 == "yes"),
+              "Empirical SE" = sum(pmempse_q15 == "yes"),
+              "(R)MSE" = sum(pm_r_mse_q15 == "yes"),
+              "Coverage" = sum(pmcover_q15 == "yes"),
+              "Type I error rate" = sum(pmtypeierror_q15 == "yes"),
+              "Power" = sum(pmpower_q15 == "yes"),
+              "CI width" = sum(pmciwidth_q15 == "yes"),
+              "Other" = sum(!is.na(pmother_q15))) %>%
+    gather(key = "PM", value = "count", "Convergence", "Bias", "(R)MSE", 
+           "Empirical SE", "Coverage", "Type I error rate", 
+           "Power", "CI width", "Other") %>%
+    bind_rows(q15_other) %>% 
+    group_by(PM) %>% 
+    dplyr::summarize(sum = sum(count)) %>% 
+    arrange(desc(sum))
+
+```
+
+
+
+
+```{r}
+sessionInfo()
+```

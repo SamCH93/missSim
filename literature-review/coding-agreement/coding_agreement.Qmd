@@ -1,0 +1,178 @@
+---
+title: "Evaluation of coding agreement"
+author: "Frantisek Bartos"
+date: "15 August 2023"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+# Analyses for the appendix
+
+Prepare the data
+
+```{r}
+library(tidyverse)
+library(here)
+
+## data
+sim_res_fac <- readRDS(file = here("data/sim_res_fac.RDS"))
+
+sim_res_fac  <- sim_res_fac[sim_res_fac$simstudy_q1 == "yes",]
+
+# Some cleaning
+sim_res_fac_clean <- sim_res_fac %>% 
+  # ignore irrelevant cols
+    select(!c(x1, year, issue, journal, quoteaims_q3, ncondsnotes_q6,
+              nsimjustifiednotes_q9, pmnotes_q15, codelink_q20)) %>% 
+  # add missing "whichsim"
+  mutate(whichsim = ifelse(is.na(whichsim), 1, whichsim)) %>% 
+  # remove trailing zero after dot
+  mutate(across(everything(),
+                ~gsub("\\.0$", "", .))) %>% 
+  # for certain columns, NA is treated as unclear
+  mutate(across(c(nsim_q8, nestimands_q11, pmsclear_q15, mcerrors_q16),
+                ~gsub("NA", "unclear", .))) %>% 
+  mutate(nestimands_q11 = ifelse(is.na(nestimands_q11),
+                                       "unclear", nestimands_q11)) %>% 
+  mutate(mcerrors_q16 = ifelse(is.na(mcerrors_q16),
+                                       "unclear", mcerrors_q16)) %>% 
+  # remove '+' or '?' from certain columns
+  mutate(nestimands_q11 = gsub("+", "", nestimands_q11),
+         nestimands_q11 = gsub("?", "", nestimands_q11)) %>% 
+  # some manual recoding of open-text columns (such that order is equal for
+  # assessment and agreement)
+  mutate(mcerrors_q16 = ifelse(doi == "https://doi.org/10.3758/s13428-021-01580-y",
+                               "plot, table", mcerrors_q16))
+
+coding_orig  <- data.frame(sim_res_fac_clean[sim_res_fac_clean$coding_type == "assessment",])
+coding_test  <- data.frame(sim_res_fac_clean[sim_res_fac_clean$coding_type == "agreement",])
+
+agreement_matrix <- matrix(NA, ncol = ncol(coding_test), nrow = nrow(coding_test))
+rownames(agreement_matrix) <- coding_test$doi
+colnames(agreement_matrix) <- colnames(coding_test)
+agreement_matrix <- data.frame(agreement_matrix)
+
+# fix one DOI name issue
+coding_orig$doi[coding_orig$doi == "https://doi.org/10.1037/met0000386\r\n"] <- "https://doi.org/10.1037/met0000386"
+
+```
+
+
+
+```{r fig.align = "center", fig.height = 5, fig.width = 10}
+# assess agreement
+disagreements <- c()
+for(j in 1:ncol(agreement_matrix)){
+  for(i in 1:nrow(agreement_matrix)){
+    this_test <- coding_test[i,j]
+    this_orig <- coding_orig[coding_orig$doi == coding_test$doi[i],j]
+    
+    if(is.na(this_orig)){
+      this_orig <- "coded as NA"
+    }
+        if(is.na(this_test)){
+      this_test <- "coded as NA"
+    }
+    
+    if(this_test == this_orig){
+      agreement_matrix[i,j] <- TRUE
+    }else{
+      agreement_matrix[i,j] <- FALSE
+      disagreements <- c(disagreements, paste0(
+        colnames(coding_orig)[j], " in (", coding_test$doi[i], "): ", this_orig, " vs ", this_test
+      ))
+    }
+  }    
+}
+
+
+print(disagreements)
+
+```
+
+
+```{r fig.align = "center", fig.height = 15, fig.width = 10}
+par(mar = c(4, 10, 0, 0))
+barplot(apply(agreement_matrix, 2, mean), horiz = TRUE, las = 1, xlab = "Proportion agreement")
+
+```
+
+
+Figure for the paper:
+```{r fig.align = "center", fig.height = 8, fig.width = 5*1.5}
+theme_bs <- function(){
+  # add google font
+  sysfonts::font_add_google("News Cycle", "news")
+  # use showtext
+  showtext::showtext_auto()
+  # theme
+  ggplot2::theme_bw(base_family = "news") + 
+  ggplot2::theme(
+    legend.position = "top",
+    panel.grid.minor = element_blank(),
+    
+    # Title and Axis Texts
+    plot.title = ggplot2::element_text(size = ggplot2::rel(1.2), hjust = 0.5),
+    plot.subtitle = ggplot2::element_text(size = ggplot2::rel(1.1), hjust = 0.5),
+    axis.title = ggplot2::element_text(size = ggplot2::rel(1.15)),
+    axis.text = ggplot2::element_text(size = ggplot2::rel(1.1)),
+    axis.text.x = ggplot2::element_text(margin = ggplot2::margin(5, b = 10))
+  )
+}
+theme_set(theme_bs())
+
+agreement_plot <- agreement_matrix %>% 
+  as.data.frame() %>% 
+  # filter studies where we reviewed different sims for now (so whichsim == TRUE/1)
+  filter(whichsim == 1) %>% 
+  apply(., 2, mean) %>% 
+  as.data.frame() %>% 
+  tibble::rownames_to_column(var = "Question") %>% 
+  rename("Agreement" = ".") %>% 
+  filter(!Question %in% c("whichsim", "doi", "reviewer", 
+                          "pmother_q15", "coding_confidence", "coding_type")) %>% 
+  mutate(Question = factor(Question, levels = Question)) %>%
+  mutate(Question = forcats::fct_rev(Question)) %>% 
+  ggplot(aes(x = Agreement, y = Question))+
+    ## geom_bar(stat = "identity", alpha = 0.8, fill = "#08519c") +
+    geom_segment(aes(xend = 0, yend = Question), alpha = 0.5, size = 0.2) +
+    geom_point(size = 0.5) +
+    scale_fill_gradient(high = "darkblue", low = "red") +
+    scale_x_continuous(limits = c(0, 1), expand = c(0.01, 0.01), labels = scales::percent) +
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major.y = element_blank(),
+          axis.text.y = element_text(size = rel(0.4)),
+          axis.text.x = element_text(size = rel(0.5)),
+          axis.title = element_text(size = rel(0.55)))
+
+ggsave("agreement_plot.pdf", agreement_plot, path = here("figures/"),
+       device = "pdf", height = 3, width = 4)
+
+```
+
+
+Descriptive summary:
+```{r}
+agreement_matrix %>% 
+  as.data.frame() %>% 
+  # filter studies where we reviewed different sims for now (so whichsim == TRUE/1)
+  filter(whichsim == 1) %>% 
+  apply(., 2, mean) %>% 
+  as.data.frame() %>% 
+  tibble::rownames_to_column(var = "Question") %>% 
+  rename("Agreement" = ".") %>% 
+  filter(!Question %in% c("whichsim", "doi", "reviewer", 
+                          "pmother_q15", "coding_confidence", "coding_type")) %>% 
+  mutate(Question = factor(Question, levels = Question)) %>%
+  mutate(Question = forcats::fct_rev(Question)) %>% 
+  summary()
+```
+
+
+
+```{r}
+sessionInfo()
+```
+
