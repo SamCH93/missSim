@@ -1,4 +1,5 @@
 library(dplyr)
+library(tidyr)
 library(ggplot2)
 setwd("case-studies/Carter2019")
 load("carter2019.rda")
@@ -75,25 +76,25 @@ fig3 <- function(data, pubbias = "none") {
            aes(x = factor(k), y = RR, ymin = RR - mcse, ymax = RR + mcse,
                color = RRtype, fill = RRtype, shape = qrpEnv)) +
         facet_grid(tau ~ method) +
-        geom_pointrange(position = position_dodge(width = 0.5), size = 2,
+        geom_pointrange(position = position_dodge(width = 0.75), size = 2,
                         fatten = 1) +
         geom_pointrange(data = filter(fig3dat, censor == pubbias, RRtype == "Power"),
-                        position = position_dodge(width = 0.5), size = 2,
+                        position = position_dodge(width = 0.75), size = 2, alpha = 0.9,
                         fatten = 1) +
         ## missingness warning labels
         geom_text(aes(y = RR - mcse - 0.05, label = misswarn), size = 7,
-                  position = position_dodge(width = 0.6), show.legend = FALSE) +
+                  position = position_dodge(width = 0.75), show.legend = FALSE) +
         geom_text(data = filter(fig3dat, censor == pubbias, delta == 0.5),
                   aes(y = RR + mcse + 0.05, label = misswarn), size = 7,
-                  position = position_dodge(width = 0.6), show.legend = FALSE) +
+                  position = position_dodge(width = 0.75), show.legend = FALSE) +
          ## missingness rates when larger than 0%
         geom_text(data = filter(fig3dat, censor == pubbias, missperc != "0%", delta == 0),
-                  aes(y = - 0.075, label = missperc), size = 3,
-                  position = position_dodge(width = 0.6), show.legend = FALSE) +
+                  aes(y = - 0.1, label = missperc), size = 2.5,
+                  position = position_dodge(width = 0.75), show.legend = FALSE) +
         geom_text(data = filter(fig3dat, censor == pubbias, missperc != "0%", delta == 0.5),
-                  aes(y = 1.075, label = missperc), size = 3,
-                  position = position_dodge(width = 0.6), show.legend = FALSE) +
-        scale_y_continuous(limits = c(-0.1, 1.1), breaks = c(0.05, 0.5, 0.8, 1),
+                  aes(y = 1.125, label = missperc), size = 2.5,
+                  position = position_dodge(width = 0.75), show.legend = FALSE) +
+        scale_y_continuous(limits = c(-0.125, 1.175), breaks = c(0.05, 0.5, 0.8, 1),
                            labels = scales::percent) +
         labs(x = "Studies k", y = "Rejection rate", color = "True effect",
              shape = "QRPs", fill = "True effect",
@@ -106,9 +107,10 @@ fig3 <- function(data, pubbias = "none") {
         theme(legend.position = "bottom", panel.grid.minor = element_blank())
 }
 
-## replicate some figures from paper
-fig4(data = carter2019, pubbias = "none")
-fig3(data = carter2019, pubbias = "none")
+## ## replicate some figures from paper
+## fig4(data = carter2019, pubbias = "none")
+## fig3(data = carter2019, pubbias = "none")
+## ggsave("carter2019-fig3a.pdf", plot = fig3a, height = 1.5, width = 2.5, scale = 6)
 
 
 ## case-wise vs. list-wise deletion vs. baseline replacement -- how does it
@@ -161,41 +163,30 @@ carter2019summaries <- left_join(carter2019, carter2019rema) |>
            biasranklist = rank(abs(biaslist)),
            biasrankbase = rank(abs(biasbase)))
 
+## carter2019summaries |>
+##     pivot_longer(cols = c("RRrankcase", "RRranklist", "RRrankbase"),
+##                  names_to = "type", values_to = "RRrank") |>
+##     mutate(type = factor(type, levels = c("RRrankcase", "RRranklist", "RRrankbase"),
+##                          labels = c("Case-wise deletion", "List-wise deletion",
+##                                     "Baseline method replacement"))) |>
+##     ggplot(aes(x = RRrank, fill = type, col = type)) +
+##     facet_grid(censor ~ method) +
+##     geom_bar(position = position_dodge2(width = 0.1),
+##              alpha = 0.5) +
+##     labs(x = "Rejection Rate Rank (lower is better)", color = "Approach",
+##          fill = "Approach") +
+##     scale_x_continuous(breaks = seq(1, 7)) +
+##     theme_bw() +
+##     theme(panel.grid.minor = element_blank(),
+##           legend.position = "top")
 
-
-carter2019summaries |>
-    mutate(RRcaselistdiff = abs(RRcase - RRlist),
-           RRcasebasediff = abs(RRcase - RRbase),
-           biascaselistdiff = abs(biascase - biaslist),
-           biascasebasediff = abs(biascase - biasbase)) |>
-    arrange(-RRcasebasediff, -RRcaselistdiff, -biascaselistdiff) |>
-    print(n = 20, width = 160)
-
-
-carter2019summaries |>
-    pivot_longer(cols = c("RRrankcase", "RRranklist", "RRrankbase"),
-                 names_to = "type", values_to = "RRrank") |>
-    mutate(type = factor(type, levels = c("RRrankcase", "RRranklist", "RRrankbase"),
-                         labels = c("Case-wise deletion", "List-wise deletion",
-                                    "Baseline method replacement"))) |>
-    ggplot(aes(x = RRrank, fill = type, col = type)) +
-    facet_grid(censor ~ method) +
-    geom_bar(position = position_dodge2(width = 0.1),
-             alpha = 0.5) +
-    labs(x = "Rejection Rate Rank (lower is better)", color = "Approach",
-         fill = "Approach") +
-    scale_x_continuous(breaks = seq(1, 7)) +
-    theme_bw() +
-    theme(panel.grid.minor = element_blank(),
-          legend.position = "top")
-
-ggplot(data = carter2019summaries, aes(x = biasrankcase)) +
-    facet_grid(censor ~ method) +
-    geom_bar(width = 0.3,  alpha = 0.8) +
-    labs(x = "Bias Rank (lower is better)") +
-    scale_x_continuous(breaks = seq(1, 7)) +
-    theme_bw() +
-    theme(panel.grid.minor = element_blank())
+## ggplot(data = carter2019summaries, aes(x = biasrankcase)) +
+##     facet_grid(censor ~ method) +
+##     geom_bar(width = 0.3,  alpha = 0.8) +
+##     labs(x = "Bias Rank (lower is better)") +
+##     scale_x_continuous(breaks = seq(1, 7)) +
+##     theme_bw() +
+##     theme(panel.grid.minor = element_blank())
 
 ## ## Omit missing values and the associated repetition (list-wise deletion)
 ## carter2019list <- carter2019 |>
@@ -220,6 +211,59 @@ ggplot(data = carter2019summaries, aes(x = biasrankcase)) +
 ## ggpubr::ggarrange(a2, b2, ncol = 1, common.legend = TRUE)
 
 
+carter2019summarieslong <- carter2019summaries |>
+  filter(delta == 0, tau == 0, k == 10, censor == "none") |>
+  pivot_longer(cols = c(RRcase, RRlist, RRbase), names_to = "Type", values_to = "RR") |>
+  mutate(RRMCSE =  case_when(Type == "RRcase" ~ RRMCSEcase,
+                             Type == "RRlist" ~ RRMCSElist,
+                             TRUE ~ RRMCSEbase),
+         bias = case_when(Type == "RRcase" ~ biascase,
+                          Type == "RRlist" ~ biaslist,
+                          TRUE ~ biasbase),
+         biasMCSE = case_when(Type == "RRcase" ~ biasMCSEcase,
+                              Type == "RRlist" ~ biasMCSElist,
+                              TRUE ~ biasMCSEbase),
+         missrate =  case_when(Type == "RRcase" ~ missratecase,
+                               Type == "RRlist" ~ missratelist,
+                               TRUE ~ missratebase),
+         Type = factor(Type, levels = c("RRbase", "RRlist", "RRcase"),
+                       labels = c("baseline method (RE) replacement", 
+                                  "list-wise deletion",
+                                  "case-wise deletion")),
+         QRP = factor(qrpEnv, levels = c("none", "med", "high"),
+                      labels = c("no QRPs environment", 
+                                 "medium QRPs environment",
+                                 "high QRPs environment"))) |>
+  ungroup() |>
+  select(method, k, delta, tau, Type, QRP, RR, RRMCSE, bias, biasMCSE, missrate)
+
+dodge <- 0.7
+cols <- palette.colors(n = 4, palette = "Okabe-Ito")[-1]
+ggplot(data = carter2019summarieslong,
+       aes(x = method, y = RR, color = Type)) +
+  facet_grid(~ QRP) +
+  geom_vline(xintercept = seq(1.5, 6.5), lty = 3, alpha = 0.25) + 
+  geom_hline(yintercept = 0.05, lty = 2, alpha = 0.6) +
+  geom_errorbar(aes(ymin = RR - RRMCSE, ymax = RR + RRMCSE),
+                position = position_dodge(width = dodge), width = 0) +
+  geom_point(position = position_dodge(width = dodge)) +
+  geom_text(aes(y = max(RR + RRMCSE + 0.01),
+                label = paste0(round(missrate*100), "%")),
+            position = position_dodge(width = dodge), size = 3,
+            show.legend = FALSE) +
+  labs(x = "Method", color = "", y = bquote("Type I error rate " %+-% "MCSE")
+       # subtitle = bquote("no publication bias," ~ "no heterogeneity (" * 
+       #                     tau == 0 * ")," ~ k == 10 ~ "studies")
+  ) +
+  scale_y_continuous(breaks = c(0, 0.025, 0.05, 0.075, 0.1), labels = scales::percent) +
+  scale_color_manual(values = cols) +
+  guides(color = guide_legend(reverse = TRUE)) +
+  coord_flip(ylim = c(0, 0.11)) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(),
+        legend.position = "bottom")
+ggsave("fig-carter-handling-missingness.pdf", width = 8, height = 5, scale = 0.9)
 
 
 ## ## Fit model to understand occurrence of missingness
@@ -240,6 +284,11 @@ ggplot(data = carter2019summaries, aes(x = biasrankcase)) +
 ##                method = "anova",
 ##                control = rpart.control(maxdepth = 10))
 ## prp(tree2, type = 4, prefix = "Prop. Miss = ")
+
+## ## fit linear probability model
+## lm1 <- lm(missing ~ method*(k + delta + qrpEnv + censor + tau),
+##           data = carter2019individual)
+## summary(lm1)
 
 ## ## fit logistic regression
 ## glm1 <- glm(missing ~ method*(k + delta + qrpEnv + censor + tau),
