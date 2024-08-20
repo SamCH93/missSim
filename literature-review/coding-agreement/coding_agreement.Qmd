@@ -1,10 +1,25 @@
 ---
-title: "Evaluation of coding agreement"
-author: "Frantisek Bartos"
-date: "15 August 2023"
-output:
-  html_document:
-    df_print: paged
+title: "Handling Missingness and Non-Convergence in Simulation Studies"
+subtitle: "Coding Agreement of Raters"
+author: 
+ - Samuel Pawel
+ - Björn S. Siepe
+ - Anna Lohmann
+ - František Bartoš
+date: "15 August 2024"
+format:
+  html:
+    toc: true
+    number-sections: true
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+    code-summary: "Show the code"
+    fig-width: 7
+    fig-height: 4.5
+execute:
+  message: false
+  warning: false
 ---
 
 

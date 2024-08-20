@@ -1,7 +1,11 @@
 ---
-title: "miss-sim"
+title: "Handling Missingness and Non-Convergence in Simulation Studies"
 subtitle: "Randomizing papers for agreement assessment"
-author: "Björn S. Siepe"
+author: 
+ - Samuel Pawel
+ - Björn S. Siepe
+ - Anna Lohmann
+ - František Bartoš
 date: "15 August 2024"
 format:
   html:
@@ -19,7 +23,7 @@ execute:
 ---
 
 # Background
-This document contains code to randomize papers from the literature review to assess agreement between different raters
+This document contains code to randomize papers from the literature review to assess agreement between different raters.
 
 # Prep
 
@@ -27,11 +31,25 @@ Load the data and the tidyverse packages:
 ```{r}
 set.seed(2024)
 library(tidyverse)
+library(readxl)
 
 # Load the data
-
+data_fb <- read_xlsx("data/lit_review_data_FB.xlsx")
+data_sp <- read_xlsx("data/lit_review_data_SP.xlsx")
+data_al <- read_xlsx("data/lit_review_data_AL.xlsx")
+data_bs <- read_xlsx("data/lit_review_data_BS.xlsx")
 
 ```
+
+Combine data sets: 
+```{r}
+data_review <- rbind(data_fb, data_sp, data_al, data_bs)
+
+# delete all rows without doi
+data_review <- data_review[!is.na(data_review$doi), ]
+```
+
+
 
 
 # Randomize papers
@@ -41,23 +59,17 @@ As we preregistered:
 > Fifty studies will be coded in duplicate by a second coder. We will start with the studies that have received the lowest confidence rating (and randomly break ties). 
 
 ```{r}
-# with made-up data for now
-df <- data.frame(
-  reviewer = sample(c("AL", "SP", "FB", "BS"), 200, replace = TRUE),
-  # generate mock dois
-  doi = paste0("10.1234/", sample(letters, 200, replace = TRUE), sample(letters, 200, replace = TRUE), sample(letters, 200, replace = TRUE)),
-  Q7_coding_confidence = sample(c("low", "medium", "high"), 200, replace = TRUE)
-)
-coders <- unique(df$reviewer)
+# Names of coders
+coders <- unique(data_review$reviewer)
 
 # start with low certainty
-low_cert <- df[df$Q7_coding_confidence == "low", ]
+low_cert <- data_review[data_review$Q7_coding_confidence == "low", ]
 
 # Step 2: Check if the number of "low" certainty rows is less than 50
 if (nrow(low_cert) < 50) {
   # Step 3: If less than 50, get additional rows with "medium" certainty
   rows_needed <- 50 - nrow(low_cert)
-  medium_cert <- df[df$Q7_coding_confidence == "medium", ]
+  medium_cert <- data_review[data_review$Q7_coding_confidence == "medium", ]
   
   # Step 4: Randomly sample the required number of "medium" certainty rows
   add_sample <- medium_cert[sample(1:nrow(medium_cert), rows_needed), ]
