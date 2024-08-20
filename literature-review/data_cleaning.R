@@ -1,11 +1,11 @@
 # Packages ----------------------------------------------------------------
-library(tidyverse)    # data manipulation
 library(here)         # reproducible file handling
 library(lubridate)    # dealing with dates
 library(readxl)       # excel files
 # library(validate)     # validate dataset
 library(janitor)
 library(writexl)
+library(tidyverse)    # data manipulation
 
 # Load Data ---------------------------------------------------------------
 dat_fb <- readxl::read_excel(here::here("data/lit_review_data_FB.xlsx"))
@@ -40,22 +40,79 @@ sim_res <- all_res |>
 #   mutate(issue = as.character(issue)) |> 
 #   mutate(issue = ifelse(issue == 44987, "2-3", issue))
 
+
+
+
+
+# Check for NA ------------------------------------------------------------
 # Check for NAs in columns that should be filled
+# Q1: sim study should be coded for Q2 and Q7
 sim_res |> 
   dplyr::filter(q1_is_sim_study == "yes") |> 
   dplyr::filter(is.na(q2_mentions_missingness) | is.na(q7_coding_confidence))
 
-# TODO add more here for the different q2 and q3 columns
+# Q2: studies that mention missingness should have one place where it is mentioned
+sim_res |> 
+  dplyr::filter(q1_is_sim_study == "yes") |> 
+  dplyr::filter(q2_mentions_missingness == "yes") |> 
+  # select columns that show different places of missingness mentioning
+  select(c(reviewer, doi, all_of(contains("mentions_missingness_")))) |> 
+  rowwise() |> 
+  mutate(missingness_mentioned = sum(c_across(contains("mentions_missingness_")) == TRUE)) |> 
+  filter(missingness_mentioned == 0)
 
 
 
 
+# Q2: studies that mention missingness should mention how it is summarized
+sim_res |> 
+  dplyr::filter(q1_is_sim_study == "yes") |> 
+  dplyr::filter(q2_mentions_missingness == "yes") |> 
+  # select columns that show different places of missingness mentioning
+  select(reviewer, doi, q2_2_missingness_summarized) |> 
+  filter(is.na(q2_2_missingness_summarized))
+
+
+# Q3: studies that mention missingness should mention how it handled
+sim_res |> 
+  dplyr::filter(q1_is_sim_study == "yes") |> 
+  dplyr::filter(q2_mentions_missingness == "yes") |> 
+  # select columns that show different places of missingness mentioning
+  select(reviewer, doi, q3_report_dealing_with_missingness) |> 
+  filter(is.na(q3_report_dealing_with_missingness))
+
+
+# Q3: If authors reported how they dealt with it
+# should report which method used and if it is justified
+sim_res |> 
+  dplyr::filter(q1_is_sim_study == "yes") |> 
+  dplyr::filter(q2_mentions_missingness == "yes") |> 
+  dplyr::filter(q3_report_dealing_with_missingness == "yes") |> 
+  # which method used
+  select(reviewer, doi, q3_1_method_dealing_with_missingness, q3_2_method_justification) |> 
+  filter(is.na(q3_1_method_dealing_with_missingness) | is.na(q3_2_method_justification))
+
+# Q3: if it was justified, should state which justification was give
+sim_res |> 
+  dplyr::filter(q1_is_sim_study == "yes") |> 
+  dplyr::filter(q2_mentions_missingness == "yes") |> 
+  dplyr::filter(q3_report_dealing_with_missingness == "yes") |> 
+  dplyr::filter(q3_2_method_justification == "yes") |> 
+  # which justification was given
+  select(reviewer, doi, q3_3_type_justification) |> 
+  filter(is.na(q3_3_type_justification))
+
+
+# Reformat and save -------------------------------------------------------
 # Reformat most cols to factor
 non_factor_vars <- c("year", "issue", "doi")
 
 sim_res_fac <- sim_res |> 
   mutate(across(!c(contains(non_factor_vars), contains("comment")),
          ~as.factor(.)))
+
+
+# TODO CONVERT TO LOGICAL!
 
 
 
