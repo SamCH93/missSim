@@ -1,39 +1,61 @@
 ---
-title: "Preliminary analysis"
-author: "Samuel Pawel, Björn Siepe, František Bartoš"
-date: "11 August 2023"
-output:
-  pdf_document: default
-  # html_document:
-  #   df_print: paged
+title: "Handling Missingness and Non-Convergence in Simulation Studies"
+subtitle: "Literature Review Analysis"
+author: 
+ - Samuel Pawel
+ - Björn S. Siepe
+ - Anna Lohmann
+ - František Bartoš
+date: "20 August 2024"
+format:
+  html:
+    toc: true
+    number-sections: true
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+    code-summary: "Show the code"
+    fig-width: 10
+    fig-height: 5
+    fig-align: "center"
+execute:
+  message: false
+  warning: false
 ---
 
-# Visualizations
+# Background
+This document contains code to analyze the results of the literature review on missingness in simulation studies. 
 
-
-```{r fig.align = "center", fig.height = 5, fig.width = 10}
-## libraries
-library(dplyr)
-library(tidyr)
-library(ggplot2)
-library(colorspace)
-library(ggpubr)
-library(stringr)
-library(forcats)
-library(knitr)
-library(kableExtra)
-library(sysfonts)
-library(showtext)
+# Prep
+Load all relevant packages and the data: 
+```{r}
+set.seed(2024)
+library(tidyverse)
 library(here)
-library(Hmisc)
-# devtools::install_github("kupietz/kableExtra")
+library(sysfonts)
+library(readxl)
 
-theme_set(theme_bw() +
-          theme(legend.position = "top",
-                panel.grid.minor = element_blank()))
-## pal <- "Harmonic" # change palette here
-## ## colorspace::hcl_palettes("qualitative", plot = TRUE)
-cols <- c("BRM" = "#E69F00", "MBR" = "#009E73", "PM" = "#0072B2")
+# Load data
+# TODO adapt to full data, only with my own data for now
+data_lr <- readxl::read_xlsx(here("data/lit_review_data_BS.xlsx"))
+
+# Remove entries for coding interrater agreement
+# TODO
+# temporary
+data_lr <- data_lr |> 
+  filter(!is.na(doi)) |> 
+  filter(journal != "EM") |> 
+  rename(q1_is_sim_study = Q1_Is_sim_stufy) |> 
+  janitor::clean_names()
+```
+
+
+
+
+Set some global theme options for plotting:
+```{r}
+# Taken from Okabeito
+cols <- c("SiM" = "#0072B2", "PM" = "#E69F00", "RSM" = "#009E73", "JASA" = "#F0E442")
 # cols <- c("BRM" = "#E69F00", "MBR" = "#56B4E9", "PM" = "#009E73")
 
 # Alternative font
@@ -42,82 +64,252 @@ theme_bs <- function(){
   sysfonts::font_add_google("News Cycle", "news")
   # use showtext
   showtext::showtext_auto()
+  
   # theme
-  ggplot2::theme_bw(base_family = "news") + 
-  ggplot2::theme(
-    legend.position = "top",
-    panel.grid.minor = element_blank(),
-    
-    # Title and Axis Texts
-    plot.title = ggplot2::element_text(size = ggplot2::rel(1.2), hjust = 0.5),
-    plot.subtitle = ggplot2::element_text(size = ggplot2::rel(1.1), hjust = 0.5),
-    axis.title = ggplot2::element_text(size = ggplot2::rel(1.2)),
-    axis.text = ggplot2::element_text(size = ggplot2::rel(1.25)),
-    axis.text.x = ggplot2::element_text(margin = ggplot2::margin(5, b = 10))
-  )
+  ggplot2::theme_minimal(base_family = "news") +
+    ggplot2::theme(
+      # remove minor grid
+      panel.grid.minor = ggplot2::element_blank(),
+      # Title and Axis Texts
+      plot.title = ggplot2::element_text(face = "plain",
+                                         size = ggplot2::rel(1.2),
+                                         hjust = 0.5),
+      plot.subtitle = ggplot2::element_text(size = ggplot2::rel(1.1),
+                                            hjust = 0.5),
+      axis.text.x = ggplot2::element_text(face = "plain", size = 15),
+      axis.title.x = ggplot2::element_text(face = "plain", size = 18),
+      axis.title.y = ggplot2::element_text(face = "plain", size = 18),
+      axis.line = element_line(colour = "#6d6d6e"),
+      
+      # Faceting
+      strip.text = ggplot2::element_text(face = "plain",
+                                         size = ggplot2::rel(1.1),
+                                         hjust = 0.5),
+      strip.text.x.top = ggplot2::element_text(face = "plain", 
+                                               size = ggplot2::rel(1.2),
+                                               hjust = 0.5),
+      # strip.text.y = element_blank(),
+      strip.background = ggplot2::element_rect(fill = NA, color = NA),
+      # Grid
+      panel.grid = ggplot2::element_line(colour = "#F3F4F5"),
+      # Legend
+      legend.title = ggplot2::element_text(face = "plain"),
+      legend.position = "top",
+      legend.justification = 1,
+      # Panel/Facets
+      panel.spacing.x = ggplot2::unit(1.6, "lines"),
+      panel.spacing.y = ggplot2::unit(1.6, "lines"),
+      # Remove vertical grid lines
+      panel.grid.major.x = ggplot2::element_blank()
+      
+    )
 }
+
 theme_set(theme_bs())
+```
 
 
-## data
-sim_res_fac_full <- readRDS(file = here("data/sim_res_fac.RDS"))
-sim_res_num_full <- readRDS(file = here("data/sim_res_num.RDS"))
 
-# subset assessment only
-sim_res_fac  <- sim_res_fac_full %>%
-    filter(simstudy_q1 == "yes",
-           coding_type == "assessment")
-sim_res_num  <- sim_res_num_full %>%
-    filter(simstudy_q1 == "yes",
-           coding_type == "assessment")
+# Visualizations of Individual Questions
 
-## proportion of simulation studies by journal
-sim_res_fac_full %>%
-    filter(coding_type == "assessment" | is.na(coding_type)) %>%
-    group_by(journal) %>%
-    dplyr::summarize(propSim = mean(simstudy_q1 == "yes"),
-              n = n()) %>%
-    mutate(journalLab = paste0(journal, " (n = ", n, ")")) %>%
-    ggplot(aes(x = journalLab, y = propSim)) +
-    geom_bar(stat = "identity", col = 1) +
-    scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
-    labs(x = NULL, title ="Journal", y = "Proportion of simulation studies") +
-    theme(panel.grid.major.x = element_blank())
+## Q0/Q1: Proportion of Sim Studies per Journal/Year/Reviewer
 
-sim_res_fac_full %>%
-    filter(coding_type == "assessment" | is.na(coding_type),
-           year == 2022) %>%
-    dplyr::summarize(propSim = mean(simstudy_q1 == "yes"),
-              sim = sum(simstudy_q1 == "yes"),
-              n = n())
-sim_res_fac_full %>%
-    filter(coding_type == "assessment" | is.na(coding_type),
-           year == 2022) %>%
-    group_by(journal) %>%
-    dplyr::summarize(propSim = mean(simstudy_q1 == "yes"),
-              sim = sum(simstudy_q1 == "yes"),
-              n = n())
-## Morris et al. (2019) find
-## "264 articles of which 199 (75\%) included at least one simulation study"
-
-
-## year
-ggplot(data = sim_res_fac, aes(x = factor(year))) +
+The following plot shows the number of simulation studies per journal.
+```{r}
+data_lr |> 
+  ggplot(aes(x = Q1_Is_sim_stufy, fill = journal)) +
     geom_bar(col = 1) +
-    labs(x = NULL, title ="Year") +
-    theme(panel.grid.major.x = element_blank())
+    labs(x = NULL, title ="Number of simulation studies per journal", fill = "Journal") +
+    # scale_fill_discrete_qualitative(palette = pal) + 
+    scale_fill_manual(values = cols) +
+    # scale_y_continuous(limits = c(0, q2_plot_max), expand = c(0,0))+
+    theme(panel.grid.major.x = element_blank())+
+    labs(y = NULL)
+```
 
-## journal
-ggplot(data = sim_res_fac, aes(x = journal)) +
-    geom_bar(col = 1) +
-    labs(x = NULL, title ="Journal") +
-    theme(panel.grid.major.x = element_blank())
+The following plot shows the proportion of simulation studies per year.
+```{r}
 
-## reviewer
-ggplot(data = sim_res_fac, aes(x = reviewer)) +
-    geom_bar(col = 1) +
-    labs(x = NULL, title ="Reviewer") +
+```
+
+
+The following plot shows the proportion of simulation studies per reviewer.
+```{r}
+
+```
+
+
+## Q2: Mention of Missingness
+
+The following plot shows the ratio of simulation studies mentioning some form of missingness.
+```{r}
+# obtain max for y-axis
+q2_plot_max <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "no") |> 
+  count() |> 
+  pull(n) + 10
+
+data_lr |> 
+  filter(q1_is_sim_study == "yes") |>
+  ggplot(aes(x = q2_mentions_missingness, fill = journal, group = journal))+
+    geom_bar()+
+    labs(x = "Mentions missingness", y = "Number of studies", fill = "Journal")+
+    scale_fill_manual(values = cols)+
+    theme(panel.grid.major.x = element_blank())+
+    scale_y_continuous(limits = c(0, q2_plot_max), expand = c(0,0))
+```
+
+
+Or proportional per journal:
+```{r}
+data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  ggplot(aes(alpha = q2_mentions_missingness, 
+             x = journal, 
+             fill = journal))+
+    geom_bar(position = "fill")+
+    labs(x = "Mentions missingness", 
+         y = "Proportion of studies", 
+         fill = "Journal",
+         alpha = "")+
+    scale_y_continuous(labels = scales::percent_format())+
+    scale_alpha_manual(values = c(0.5, 1), guide = "none")+
+    scale_fill_manual(values = cols)+
+    theme(panel.grid.major.x = element_blank(),
+          legend.position = "none")
+```
+
+
+
+### Q2a: Place of Missingness Mention
+
+If missingness was mentioned, where was it reported?
+
+TODO does not work yet
+```{r}
+data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+  pivot_longer(cols = all_of(contains("mentions_missingness_")), 
+               names_to = "place_of_missingness", 
+               values_to = "value") |> 
+  filter(value == TRUE) |> 
+  group_by(journal, place_of_missingness) |> 
+  summarise(place_count = n()) |> 
+  ggplot(aes(x = place_of_missingness, y = place_count, fill = journal, group = journal))+
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Place of missingness mention", y = "Number of studies", fill = "Journal")+
+  scale_fill_manual(values = cols)+
+  theme(panel.grid.major.x = element_blank())
+```
+
+
+
+### Q2.1: Missingness Reporting
+How is missingness reported?
+
+```{r}
+
+```
+
+
+### Q2.2: Missigness Summary
+
+How are the missing cases summarized?
+
+## Q3: Handling of Missingness
+
+The following plot shows, conditional on mentioning missingness, how authors reported how they handled missingness.
+
+```{r}
+data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+  ggplot(aes(x = q3_report_dealing_with_missingness, fill = journal, group = journal))+
+    geom_bar()+
+    labs(x = "Handling of missingness", y = "Number of studies", fill = "Journal")+
+    scale_fill_manual(values = cols)+
     theme(panel.grid.major.x = element_blank())
+```
+
+
+### Q3.1: Method of Handling Missingness
+
+If authors report how they dealt with missingness, what method did they use?
+
+```{r}
+data_lr |> 
+  filter(q1_is_sim_study == "yes") |>
+  filter(q2_mentions_missingness == "yes") |>
+  filter(q3_report_dealing_with_missingness == "yes") |>
+  ggplot(aes(x = q3_1_method_dealing_with_missingness, fill = journal, group = journal))+
+    geom_bar()+
+    labs(x = "Method of handling missingness", y = "Number of studies", fill = "Journal")+
+    scale_fill_manual(values = cols)+
+    theme(panel.grid.major.x = element_blank())
+```
+
+
+### Q3.2: Missingness Handling Justification
+
+If authors report how they dealt with missingness, what justification did they provide for their choice?
+
+```{r}
+data_lr |> 
+  filter(q1_is_sim_study == "yes") |>
+  filter(q2_mentions_missingness == "yes") |>
+  filter(q3_report_dealing_with_missingness == "yes") |>
+  ggplot(aes(x = q3_2_method_justification, fill = journal, group = journal))+
+    geom_bar()+
+    labs(x = "Justification of handling missingness", y = "Number of studies", fill = "Journal")+
+    scale_fill_manual(values = cols)+
+    theme(panel.grid.major.x = element_blank())
+```
+
+
+#### Q 3.3. Type of Justification
+
+If authors provide a justification for their choice of handling missingness, what type of justification do they provide?
+```{r}
+data_lr |> 
+  filter(q1_is_sim_study == "yes") |>
+  filter(q2_mentions_missingness == "yes") |>
+  filter(q3_report_dealing_with_missingness == "yes") |>
+  filter(q3_2_method_justification == "yes") |>
+  ggplot(aes(x = q3_3_type_justification, fill = journal, group = journal))+
+    geom_bar()+
+    labs(x = "Type of justification", y = "Number of studies", fill = "Journal")+
+    scale_fill_manual(values = cols)+
+    theme(panel.grid.major.x = element_blank())
+```
+
+
+## Q4: Code Availability
+
+If the study was a simulation study, was code available?
+```{r}
+data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  ggplot(aes(x = q4_code_available, fill = journal, group = journal))+
+    geom_bar()+
+    labs(x = "Code availability", y = "Number of studies", fill = "Journal")+
+    scale_fill_manual(values = cols)+
+    theme(panel.grid.major.x = element_blank())
+```
+
+
+
+
+# Combined Plots for Manuscript
+
+
+# Descriptives
+
+
+
+```{r fig.align = "center", fig.height = 5, fig.width = 10}
+
 
 ## Q2 number of simulation studies
 # scale max for plot
