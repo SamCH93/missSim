@@ -11,6 +11,9 @@ To reproduce the case studies, refer to the files in `/case-studies/`
 
 * `/case-studies/Carter2019/`: contains R scripts to reproduce case study from
   Carter et al. (2019)
+* TODO: add other case studies
   
-* `/case-studies/vanSmeden2016/`: contains R scripts to reproduce case study
-  from van Smeden et al. (2016)
+  
+To reproduce the literature review analyses, refer to the files in `literature-review`
+
+* TODO: add file overview
