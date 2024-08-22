@@ -100,10 +100,10 @@ ggplot(data = carter2019summarieslong,
   geom_errorbar(aes(ymin = RR - RRMCSE, ymax = RR + RRMCSE),
                 position = position_dodge(width = dodge), width = 0) +
   geom_point(position = position_dodge(width = dodge)) +
-  geom_text(aes(y = max(RR + RRMCSE + 0.01),
+  geom_text(aes(y = 0.115,
                 label = paste0(round(missrate*100), "%")),
             position = position_dodge(width = dodge), size = 3,
-            show.legend = FALSE) +
+            show.legend = FALSE, hjust = 1) +
   labs(x = "Method", color = "", y = bquote("Type I error rate " %+-% "MCSE")
        # subtitle = bquote("no publication bias," ~ "no heterogeneity (" * 
        #                     tau == 0 * ")," ~ k == 10 ~ "studies")
