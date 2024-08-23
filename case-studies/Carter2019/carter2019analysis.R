@@ -119,14 +119,77 @@ ggplot(data = carter2019summarieslong,
 ggsave("fig-carter-handling-missingness.pdf", width = 8, height = 5, scale = 0.9)
 
 
-## ## Fit models to understand occurrence of missingness
-## carter2019$missing <- is.na(carter2019$b0_estimate)
-## carter2019summary <- carter2019 |>
-##     group_by(method, k, delta, tau, qrpEnv, censor) |>
-##     summarise(prop_missing = mean(missingcase)) |>
-##     ungroup()
-## carter2019individual <- carter2019 |>
-##     select(method, k, delta, tau, qrpEnv, censor, missingcase)
+## understand occurrence of missingness
+carter2019$missingcase <- is.na(carter2019$b0_estimate)
+carter2019individual <- carter2019 |>
+    select(method, k, delta, tau, qrpEnv, censor, missingcase)
+carter2019summary <- carter2019 |>
+    group_by(method, k, delta, tau, qrpEnv, censor) |>
+    summarise(prop_missing = mean(missingcase)) |>
+    ungroup()
+
+## which methods-conditions show most missingness?
+carter2019summary |>
+    arrange(-prop_missing) |>
+    print(n = 50)
+
+## visualize missingness
+library(ggbeeswarm)
+plotA <- carter2019summary |>
+    mutate(condition = paste(k, delta, tau, qrpEnv, censor),
+           method = factor(method, levels = c("RE", "WAAP-WLS", "PET-PEESE",
+                                              "TF", "3PSM", "p-curve",
+                                              "p-uniform"))) |>
+    ggplot(aes(x = method, y = prop_missing)) +
+    ## geom_boxplot() +
+    geom_line(aes(group = condition), alpha = 0.1) +
+    ## geom_boxplot(alpha = 0.8, outliers = FALSE,
+    ##              #position = position_nudge(x = 0.2),
+    ##              width = 0.15) +
+    geom_quasirandom(alpha = 0.2, width = 0.4) +
+    scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+    labs(x = "Method", y = "Condition-wise non-convergence rate") +
+    theme_bw() +
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major = element_line(linetype = "dashed"))
+
+## Firth regression
+## library(logistf) # doesn't converge =)
+## firth1 <- logistf(missingcase ~ method*(k + delta + qrpEnv + censor + tau),
+##                   data = carter2019individual,
+##                   firth = TRUE, plcontrol = FALSE,
+##                   control = logistf.control(maxit = 1000))
+## summary(firth1)
+## library(brglm2) # this one converges but takes a while!
+## brglmfit <- glm(missingcase ~ method*(k + delta + qrpEnv + censor + tau),
+##                 data = carter2019individual,
+##                 family = binomial(link = "logit"), method = "brglmFit",
+##                 type = "AS_mean")
+## save(object = brglmfit, file = "brglmfit.rda") # very large
+## load("brglmfit.rda")
+## library(broom)
+## logistDF <- tidy(brglmfit) |>
+##     mutate(term = factor(term, levels = rev(tidy(brglmfit)$term)),
+##            lower = estimate - 1.96*std.error,
+##            upper = estimate + 1.96*std.error)
+## save(logistDF, file = "brglmsummary.rda")
+load("brglmsummary.rda")
+plotB <-
+    ggplot(data = logistDF, aes(x = term, y = estimate)) +
+    geom_hline(yintercept = 0, lty = 2, alpha = 0.3) +
+    geom_pointrange(aes(ymin = lower, ymax = upper,
+                        color = ifelse(lower > 0 | upper < 0, TRUE, FALSE)),
+                    show.legend = FALSE) +
+    lims(y = c(-18, 18)) +
+    labs(y = bquote("lower non-convergence" %<-% "Estimate"  %->% "higher non-convergence"),
+         x = "Logistic regression coefficient") +
+    scale_color_manual(values = c(1, 2)) +
+    coord_flip() +
+    theme_bw() +
+    theme(panel.grid.minor = element_blank())
+
+library(cowplot)
+plot_grid(plotA, plotB, labels = c("A", "B"), ncol = 2)
 
 ## ## decision tree
 ## library(rpart)
@@ -145,12 +208,6 @@ ggsave("fig-carter-handling-missingness.pdf", width = 8, height = 5, scale = 0.9
 ## glm1 <- glm(missingcase ~ method*(k + delta + qrpEnv + censor + tau),
 ##             family = "binomial", data = carter2019individual)
 ## summary(glm1)
-
-## ## Firth regression
-## library(logistf)
-## firth1 <- logistf(missingcase ~ method*(k + delta + qrpEnv + censor + tau),
-##                   data = carter2019individual)
-## summary(firth1)
 
 
 ## ## check ranks
