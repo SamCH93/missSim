@@ -6,6 +6,7 @@
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(ggbeeswarm)
 ## setwd("case-studies/Carter2019")
 load("carter2019.rda")
 
@@ -100,10 +101,10 @@ ggplot(data = carter2019summarieslong,
   geom_errorbar(aes(ymin = RR - RRMCSE, ymax = RR + RRMCSE),
                 position = position_dodge(width = dodge), width = 0) +
   geom_point(position = position_dodge(width = dodge)) +
-  geom_text(aes(y = max(RR + RRMCSE + 0.01),
+  geom_text(aes(y = 0.115,
                 label = paste0(round(missrate*100), "%")),
             position = position_dodge(width = dodge), size = 3,
-            show.legend = FALSE) +
+            show.legend = FALSE, hjust = 1) +
   labs(x = "Method", color = "", y = bquote("Type I error rate " %+-% "MCSE")
        # subtitle = bquote("no publication bias," ~ "no heterogeneity (" * 
        #                     tau == 0 * ")," ~ k == 10 ~ "studies")
@@ -119,14 +120,97 @@ ggplot(data = carter2019summarieslong,
 ggsave("fig-carter-handling-missingness.pdf", width = 8, height = 5, scale = 0.9)
 
 
-## ## Fit models to understand occurrence of missingness
-## carter2019$missing <- is.na(carter2019$b0_estimate)
-## carter2019summary <- carter2019 |>
-##     group_by(method, k, delta, tau, qrpEnv, censor) |>
-##     summarise(prop_missing = mean(missingcase)) |>
-##     ungroup()
-## carter2019individual <- carter2019 |>
-##     select(method, k, delta, tau, qrpEnv, censor, missingcase)
+## understand occurrence of missingness
+carter2019$missingcase <- is.na(carter2019$b0_estimate)
+carter2019individual <- carter2019 |>
+    select(method, k, delta, tau, qrpEnv, censor, missingcase) |>
+    ## recode as non-ordered factor to use treatment contrasts in regressions
+    mutate(qrpEnv = factor(qrpEnv, levels = c("none", "med", "high"),
+                           ordered = FALSE),
+           censor = factor(censor, levels = c("none", "med", "high"),
+                           ordered = FALSE))
+carter2019summary <- carter2019 |>
+    group_by(method, k, delta, tau, qrpEnv, censor) |>
+    summarise(prop_missing = mean(missingcase)) |>
+    ungroup()
+
+## which methods-conditions show most missingness?
+carter2019summary |>
+    arrange(-prop_missing) |>
+    print(n = 50)
+
+## visualize missingness
+plotA <- carter2019summary |>
+    mutate(condition = paste(k, delta, tau, qrpEnv, censor),
+           method = factor(method, levels = c("RE", "WAAP-WLS", "PET-PEESE",
+                                              "TF", "3PSM", "p-curve",
+                                              "p-uniform"))) |>
+    ggplot(aes(x = method, y = prop_missing)) +
+    ## geom_boxplot() +
+    geom_line(aes(group = condition), alpha = 0.1) +
+    ## geom_boxplot(alpha = 0.8, outliers = FALSE,
+    ##              #position = position_nudge(x = 0.2),
+    ##              width = 0.15) +
+    geom_quasirandom(alpha = 0.2) +
+    scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+    labs(x = "Method", y = "Condition-wise non-convergence rate") +
+    theme_bw() +
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major = element_line(linetype = "dashed"))
+
+## Firth regression
+## library(logistf) # doesn't converge =)
+## firth1 <- logistf(missingcase ~ method*(k + delta + qrpEnv + censor + tau),
+##                   data = carter2019individual,
+##                   firth = TRUE, plcontrol = FALSE,
+##                   control = logistf.control(maxit = 1000))
+## summary(firth1)
+## library(brglm2) # this one converges but takes a while!
+## brglmfit <- glm(missingcase ~ method*(k + delta + qrpEnv + censor + tau),
+##                 data = carter2019individual,
+##                 family = binomial(link = "logit"),
+##                 method = "brglmFit",
+##                 type = "AS_mean",
+##                 trace = TRUE)
+## save(object = brglmfit, file = "brglmfit.rda") # very large
+## load("brglmfit.rda")
+## library(broom)
+## logistDF <- tidy(brglmfit) |>
+##     mutate(term = factor(term, levels = rev(tidy(brglmfit)$term)),
+##            lower = estimate - 1.96*std.error,
+##            upper = estimate + 1.96*std.error)
+## save(logistDF, file = "brglmsummary.rda")
+load("brglmsummary.rda")
+## plotB <-
+logistDF <- logistDF |>
+    mutate(coef = as.character(term),
+           coef = gsub("method", "", coef),
+           coef = gsub("censormed", "pubBias=medium", coef),
+           coef = gsub("censorhigh", "pubBias=high", coef),
+           coef = gsub("qrpEnvmed", "QRP=medium", coef),
+           coef = gsub("qrpEnvhigh", "QRP=high", coef),
+           coef = gsub("k", "#studies", coef),
+           coef = gsub("tau", "heterogeneity", coef),
+           coef = gsub("delta", "effect", coef))
+plotB <- logistDF |>
+    mutate(coef = factor(coef, levels = rev(logistDF$coef))) |>
+    ggplot(aes(x = coef, y = estimate)) +
+    geom_hline(yintercept = 0, lty = 2, alpha = 0.3) +
+    geom_pointrange(aes(ymin = lower, ymax = upper,
+                        color = ifelse(lower > 0 | upper < 0, TRUE, FALSE)),
+                    show.legend = FALSE) +
+    lims(y = c(-20, 20)) +
+    labs(y = bquote("lower non-convergence" %<-% "Estimate"  %->% "higher non-convergence"),
+         x = "Logistic regression coefficient") +
+    scale_color_manual(values = c(1, 2)) +
+    coord_flip() +
+    theme_bw() +
+    theme(panel.grid.minor = element_blank())
+
+library(cowplot)
+plot_grid(plotA, plotB, labels = c("A", "B"), ncol = 1, rel_heights = c(1/3, 2/3))
+ggsave(filename = "fig-carter-exploring-missingness.pdf",
+       width = 8, height = 11, scale = 1)
 
 ## ## decision tree
 ## library(rpart)
@@ -145,12 +229,6 @@ ggsave("fig-carter-handling-missingness.pdf", width = 8, height = 5, scale = 0.9
 ## glm1 <- glm(missingcase ~ method*(k + delta + qrpEnv + censor + tau),
 ##             family = "binomial", data = carter2019individual)
 ## summary(glm1)
-
-## ## Firth regression
-## library(logistf)
-## firth1 <- logistf(missingcase ~ method*(k + delta + qrpEnv + censor + tau),
-##                   data = carter2019individual)
-## summary(firth1)
 
 
 ## ## check ranks
