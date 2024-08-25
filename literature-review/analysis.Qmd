@@ -15,8 +15,8 @@ format:
     code-fold: true
     code-tools: true
     code-summary: "Show the code"
-    fig-width: 10
-    fig-height: 5
+    fig-width: 7
+    fig-height: 4.5
     fig-align: "center"
 execute:
   message: false
@@ -29,10 +29,8 @@ This document contains code to analyze the results of the literature review on m
 
 TODOS:
 
-- fix y-axis expand for every plot
 - ensure that "yes" is always the darker shaded one where I use alpha
-- adapt to data by all reviewers
-- show descriptive stats in a table
+
 
 
 
@@ -110,7 +108,8 @@ theme_bs <- function(){
       panel.spacing.x = ggplot2::unit(1.6, "lines"),
       panel.spacing.y = ggplot2::unit(1.6, "lines"),
       # Remove vertical grid lines
-      panel.grid.major.x = ggplot2::element_blank()
+      panel.grid.major.x = ggplot2::element_blank(),
+      text = element_text(size = 22)
       
     )
 }
@@ -126,6 +125,11 @@ theme_set(theme_bs())
 
 The following plot shows the number of simulation studies per journal.
 ```{r}
+q1_plot_max <- data_lr |> 
+  count(journal) |> 
+  pull(n) |> 
+  max() * 1.1
+
 data_lr |> 
   ggplot(aes(x = journal, fill = journal, alpha = q1_is_sim_study)) +
     geom_bar(col = 1) +
@@ -135,13 +139,20 @@ data_lr |>
     # scale_fill_discrete_qualitative(palette = pal) + 
     scale_fill_manual(values = cols) +
     scale_alpha_manual(values = c(0.33, 1), guide = "none") +
-    # scale_y_continuous(limits = c(0, q2_plot_max), expand = c(0,0))+
-    theme(panel.grid.major.x = element_blank())+
+    scale_y_continuous(limits = c(0, q1_plot_max), expand = c(0,0))+
+    theme(panel.grid.major.x = element_blank(),
+          legend.position = "none")+
     labs(y = NULL)
 ```
 
 The following plot shows the proportion of simulation studies per year.
 ```{r}
+peryear_plot_max <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |>
+  count(year) |> 
+  pull(n) |> 
+  max() * 1.1
+
 data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   ggplot(aes(x = year, fill = journal)) +
@@ -151,12 +162,20 @@ data_lr |>
          fill = "Journal") +
     scale_fill_manual(values = cols) +
     theme(panel.grid.major.x = element_blank())+
+    scale_y_continuous(limits = c(0, peryear_plot_max), expand = c(0,0))+
+    scale_x_continuous(breaks = seq(2018, 2023, 1))+
     labs(y = NULL)
 ```
 
 
 The following plot shows the proportion of simulation studies per reviewer.
 ```{r}
+reviewer_plot_max <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |>
+  count(reviewer) |>
+  pull(n) |>
+  max() * 1.1
+
 data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   ggplot(aes(x = reviewer, fill = journal)) +
@@ -166,6 +185,7 @@ data_lr |>
          fill = "Journal") +
     scale_fill_manual(values = cols) +
     theme(panel.grid.major.x = element_blank())+
+    scale_y_continuous(limits = c(0, reviewer_plot_max), expand = c(0,0))+
     labs(y = NULL)
 ```
 
@@ -179,7 +199,7 @@ q2_plot_max <- data_lr |>
   filter(q1_is_sim_study == "yes") |> 
   filter(q2_mentions_missingness == "no") |> 
   count() |> 
-  pull(n) + 10
+  pull(n) * 1.1
 
 data_lr |> 
   filter(q1_is_sim_study == "yes") |>
@@ -218,8 +238,15 @@ data_lr |>
 
 If missingness was mentioned, where was it reported?
 
-TODO does not work yet
 ```{r}
+q2a_plot_max <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+  group_by(journal) |>
+  count() |> 
+  pull(n) |> 
+  max() * 1.1
+
 data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
   filter(q2_mentions_missingness == "yes") |> 
@@ -242,6 +269,7 @@ data_lr |>
            col = 1) +
   labs(x = "Place of Missingness Mention", y = "Number of Studies", fill = "Journal")+
   scale_fill_manual(values = cols)+
+  scale_y_continuous(limits = c(0, q2a_plot_max), expand = c(0,0))+
   theme(panel.grid.major.x = element_blank())
 ```
 
@@ -264,6 +292,13 @@ How are the missing cases summarized?
 The following plot shows, conditional on mentioning missingness, how authors reported how they handled missingness.
 
 ```{r}
+q3_plot_max <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+  group_by(q3_report_dealing_with_missingness) |>
+  count() |> 
+  pull(n) * 1.1
+
 data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
   filter(q2_mentions_missingness == "yes") |> 
@@ -271,6 +306,7 @@ data_lr |>
     geom_bar(col = 1)+
     labs(x = "Indicated how missingness was handled", y = "Number of Studies", fill = "Journal")+
     scale_fill_manual(values = cols)+
+    scale_y_continuous(limits = c(0, q3_plot_max), expand = c(0,0))+
     theme(panel.grid.major.x = element_blank())
 ```
 
@@ -280,14 +316,24 @@ data_lr |>
 If authors report how they dealt with missingness, what method did they use?
 
 ```{r}
+q31_plot_max <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+  filter(q3_report_dealing_with_missingness == "yes") |> 
+  group_by(q3_1_method_dealing_with_missingness) |>
+  count() |> 
+  pull(n) |> 
+  max() * 1.1
+
 data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   filter(q2_mentions_missingness == "yes") |>
   filter(q3_report_dealing_with_missingness == "yes") |>
   ggplot(aes(x = q3_1_method_dealing_with_missingness, fill = journal, group = journal))+
-    geom_bar()+
+    geom_bar(col = 1)+
     labs(x = "Method of handling missingness", y = "Number of studies", fill = "Journal")+
     scale_fill_manual(values = cols)+
+    scale_y_continuous(limits = c(0, q31_plot_max), expand = c(0,0))+
     theme(panel.grid.major.x = element_blank())
 ```
 
@@ -297,6 +343,15 @@ data_lr |>
 If authors report how they dealt with missingness, what justification did they provide for their choice?
 
 ```{r}
+q32_plot_max <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+  filter(q3_report_dealing_with_missingness == "yes") |> 
+  group_by(q3_2_method_justification) |>
+  count() |> 
+  pull(n) |> 
+  max() * 1.1
+
 data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   filter(q2_mentions_missingness == "yes") |>
@@ -305,6 +360,7 @@ data_lr |>
     geom_bar(col = 1)+
     labs(x = "Missingness Handling Justified", y = "Number of Studies", fill = "Journal")+
     scale_fill_manual(values = cols)+
+    scale_y_continuous(limits = c(0, q32_plot_max), expand = c(0,0))+
     theme(panel.grid.major.x = element_blank())
 ```
 
@@ -313,6 +369,15 @@ data_lr |>
 
 If authors provide a justification for their choice of handling missingness, what type of justification do they provide?
 ```{r}
+q33_plot_max <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+  filter(q3_report_dealing_with_missingness == "yes") |> 
+  group_by(q3_3_type_justification) |>
+  count() |> 
+  pull(n) |> 
+  max() * 1.1
+
 data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   filter(q2_mentions_missingness == "yes") |>
@@ -322,6 +387,7 @@ data_lr |>
     geom_bar(col = 1)+
     labs(x = "Type of Justification", y = "Number of Studies", fill = "Journal")+
     scale_fill_manual(values = cols)+
+    scale_y_continuous(limits = c(0, q33_plot_max), expand = c(0,0))+
     theme(panel.grid.major.x = element_blank())
 ```
 
@@ -330,14 +396,23 @@ data_lr |>
 
 If the study was a simulation study, was code available?
 ```{r}
+q4_plot_max <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  group_by(q4_code_available) |>
+  count() |> 
+  pull(n) |> 
+  max() * 1.1
+
 data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
   ggplot(aes(x = q4_code_available, fill = journal, group = journal))+
     geom_bar(col = 1)+
     labs(x = "Code availability", y = "Number of studies", fill = "Journal")+
     scale_fill_manual(values = cols)+
+    scale_y_continuous(limits = c(0, q4_plot_max), expand = c(0,0))+
     theme(panel.grid.major.x = element_blank())
 ```
+
 The same, but per journal:
 ```{r}
 data_lr |> 
@@ -345,6 +420,7 @@ data_lr |>
   filter(!is.na(q4_code_available)) |>
   ggplot(aes(alpha = q4_code_available, x = journal, fill = journal))+
     geom_bar(col = 1, position = "fill")+
+  theme(legend.position = "none") + 
    scale_alpha_manual(values = c(0.33, 1), guide = "none") +
   scale_y_continuous(labels = scales::percent_format(),
                      limits = c(0,1), expand = c(0,0)) +
@@ -368,6 +444,12 @@ data_lr |>
   pivot_wider(names_from = answer, values_from = n) |> 
   select(question, journal, everything()) |> 
   arrange(question) |> 
+  mutate(question = case_when(
+    question == "q1_is_sim_study" ~ "Q1: Is a simulation study?",
+    question == "q2_mentions_missingness" ~ "Q2: Mention missingness?",
+    question == "q3_report_dealing_with_missingness" ~ "Q3: Reports dealing with missingness?",
+    question == "q4_code_available" ~ "Q4: Code available?"
+  )) |>
   knitr::kable()
 ```
 
@@ -376,5 +458,5 @@ data_lr |>
 
 # Session Info
 ```{r}
-sessionInfo()
+pander::pander(sessionInfo())
 ```
