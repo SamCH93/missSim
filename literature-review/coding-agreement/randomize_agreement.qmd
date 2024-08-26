@@ -47,6 +47,10 @@ data_review <- rbind(data_fb, data_sp, data_al, data_bs)
 
 # delete all rows without doi
 data_review <- data_review[!is.na(data_review$doi), ]
+
+# delete econ papers
+data_review <- data_review |> 
+  filter(journal != "EM")
 ```
 
 
@@ -63,42 +67,115 @@ As we preregistered:
 coders <- unique(data_review$reviewer)
 
 # start with low certainty
-low_cert <- data_review[data_review$Q7_coding_confidence == "low", ]
+low_cert <- data_review |> 
+  filter(Q7_coding_confidence == "low")
 
-# Step 2: Check if the number of "low" certainty rows is less than 50
-if (nrow(low_cert) < 50) {
-  # Step 3: If less than 50, get additional rows with "medium" certainty
-  rows_needed <- 50 - nrow(low_cert)
-  medium_cert <- data_review[data_review$Q7_coding_confidence == "medium", ]
+# count number of low certainty rows per reviewer
+low_cert_num <- low_cert |> 
+  count(reviewer)
+
+
+# get additional rows with "medium" certainty
+rows_needed <- 50 - nrow(low_cert)
+medium_cert <- data_review |> 
+  filter(Q7_coding_confidence == "medium")
   
-  # Step 4: Randomly sample the required number of "medium" certainty rows
-  add_sample <- medium_cert[sample(1:nrow(medium_cert), rows_needed), ]
+# stratified sampling to balance whose papers are reviewed
+# calculate rows to sample for each reviewer
+n_reviewers <- length(coders)
   
-  # Step 5: Combine the "low" certainty rows with the sampled "medium" certainty rows
-  final_sample <- rbind(low_cert, add_sample)
-} else {
-  # if there are 50 or more "low" certainty rows
-  final_sample <- low_cert[sample(1:nrow(low_cert), 50), ]
+# stratified sample
+# (yes this is inefficient but fine here)
+stratified_sample <- data.frame()
+  
+# loop over each reviewer
+# consider existing low certainty rows
+rows_per_reviewer <- setNames(rep(0, length(coders)), coders)
+  
+for (coder in coders) {
+  # calculate rows needed for this coder 
+   existing_rows <- low_cert_num |> 
+      filter(reviewer == coder) |> 
+      pull(n)
+   
+  # at most 12 to review
+  rows_per_reviewer[coder] <- max(12 - existing_rows, 0)
+  
+  # if no papers needed, go to next reviewer
+  if(rows_per_reviewer[coder] == 0) {
+    next
+  }
+    
+  coder_medium <- medium_cert |> 
+    filter(reviewer == coder)
+    
+  # if there are fewer rows than needed, take all
+  if (nrow(coder_rows) <= rows_per_reviewer[coder]) {
+      stratified_sample <- rbind(stratified_sample, coder_medium)
+    # otherwise sample
+    } else {
+      stratified_sample <- rbind(stratified_sample, coder_medium[sample(1:nrow(coder_medium), rows_per_reviewer[coder]), ])
+    }
+} # end loop across coders
+
+  
+# additional rows needed? sample randomly
+extra_rows_needed <- rows_needed - nrow(stratified_sample)
+if (extra_rows_needed > 0) {
+    additional_sample <- medium_cert |>
+      filter(!doi %in% stratified_sample$doi) |>
+      slice_sample(n = extra_rows_needed)
+    stratified_sample <- rbind(stratified_sample, additional_sample)
 }
 
-# randomize the new coder in a new column
-final_sample$new_coder <- sapply(final_sample$reviewer, function(x) {
-   sample(setdiff(coders, x), 1)
-})
+# combine low and medium certainty
+final_sample <- rbind(low_cert, stratified_sample)
+
+# if too many rows, delete one paper by BS (has the highest count)
+if (extra_rows_needed < 0) {
+  # delete one paper with reviewer == BS
+  doi_delete <- final_sample |>
+    filter(reviewer == "BS") |>
+    slice_sample(n = abs(extra_rows_needed)) |>
+    pull(doi)
+  final_sample <- final_sample |>
+    filter(!doi %in% doi_delete)
+}
+
+
+# randomize the new coder in a new column until all coders either have 12 or 13 papers
+nc_check <- FALSE
+
+while(isFALSE(nc_check)){
+  final_sample$new_coder <- sapply(final_sample$reviewer, function(x) {
+    sample(setdiff(coders, x), 1)
+  })
+  
+  nc_check <- all(final_sample %>%
+                    count(new_coder) %>%
+                    pull(n) %in% c(12, 13))
+}
+```
+
+Check the number of papers from each reviewer:
+```{r}
+final_sample %>%
+  count(reviewer)
 ```
 
 Check the number of papers each coder has to code:
 ```{r}
-final_sample %>%
-  group_by(reviewer) %>%
-  summarise(n = n())
+final_sample |> 
+  count(new_coder)
 ```
 
-Create a list of DOIs for each individual coder:
+
+Create a list of DOIs for each individual coder and save to disk:
 ```{r}
-final_sample %>%
-  group_by(reviewer) %>%
-  summarise(dois = paste(doi, collapse = ", "))
+final_sample |> 
+  select(new_coder, doi, journal, issue) |> 
+  arrange(new_coder) |> 
+  write_csv2("literature-review/coding-agreement/agreement_dois_per_coder.csv")
 ```
 
 

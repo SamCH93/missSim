@@ -27,6 +27,9 @@ all_res <- janitor::clean_names(all_res)
 all_res <- all_res |> 
   rename(q1_is_sim_study = q1_is_sim_stufy)
 
+# remove irrelevant rows
+all_res <- all_res |> 
+  filter(!is.na(doi))
 
 
 # Fix data structure -----------------------------------------------------
@@ -34,14 +37,6 @@ all_res <- all_res |>
 # only the general comments column for now
 sim_res <- all_res |> 
   select(!c(q6_comments))
-
-# Issue: Excel converted "2-3" to 44987
-# sim_res <- sim_res |> 
-#   mutate(issue = as.character(issue)) |> 
-#   mutate(issue = ifelse(issue == 44987, "2-3", issue))
-
-
-
 
 
 # Check for NA ------------------------------------------------------------
@@ -60,8 +55,6 @@ sim_res |>
   rowwise() |> 
   mutate(missingness_mentioned = sum(c_across(contains("mentions_missingness_")) == TRUE)) |> 
   filter(missingness_mentioned == 0)
-
-
 
 
 # Q2: studies that mention missingness should mention how it is summarized
@@ -102,23 +95,49 @@ sim_res |>
   select(reviewer, doi, q3_3_type_justification) |> 
   filter(is.na(q3_3_type_justification))
 
+# Q4: studies that are a sim study should state if code was available
+sim_res |> 
+  dplyr::filter(q1_is_sim_study == "yes") |> 
+  # select columns that show different places of missingness mentioning
+  select(reviewer, doi, q4_code_available) |> 
+  filter(is.na(q4_code_available))
+
 
 # Reformat and save -------------------------------------------------------
 # Reformat most cols to factor
-non_factor_vars <- c("year", "issue", "doi")
+# non_factor_vars <- c("year", "issue", "doi")
 
-sim_res_fac <- sim_res |> 
-  mutate(across(!c(contains(non_factor_vars), contains("comment")),
+# sim_res_fac <- sim_res |> 
+#   mutate(across(!c(contains(non_factor_vars), contains("comment")),
+#          ~as.factor(.)))
+
+
+# convert to logical
+sim_res <- sim_res |> 
+  dplyr::mutate(across(c(
+    contains("mentions_missingness"),
+    contains("q2_1")
+  ),
+         ~as.logical(.)))
+  
+# convert other columns to factor
+sim_res <- sim_res |> 
+  dplyr::mutate(across(c(
+    q1_is_sim_study,
+    q2_mentions_missingness,
+    q3_report_dealing_with_missingness,
+    q3_1_method_dealing_with_missingness,
+    q3_2_method_justification,
+    q3_3_type_justification,
+    q4_code_available,
+    q7_coding_confidence
+  ),
          ~as.factor(.)))
 
 
-# TODO CONVERT TO LOGICAL!
-
-
-
 # Save data
-writexl::write_xlsx(sim_res_fac, path = here("data/sim_res_fac.xlsx"))
-saveRDS(sim_res_fac, file = here("data/sim_res_fac.RDS"))
+writexl::write_xlsx(sim_res, path = here::here("data/sim_res.xlsx"))
+saveRDS(sim_res, file = here::here("data/sim_res.RDS"))
 
 # LEGACY CODE
 # # Alternative: delete strings from some columns, convert these to numeric
