@@ -44,17 +44,10 @@ library(sysfonts)
 library(readxl)
 
 # Load data
-# TODO adapt to full data, only with my own data for now
-data_lr <- readxl::read_xlsx(here("data/lit_review_data_BS.xlsx"))
+data_lr <- readxl::read_xlsx(here("data/sim_res.xlsx"))
 
 # Remove entries for coding interrater agreement
 # TODO
-# temporary
-data_lr <- data_lr |> 
-  filter(!is.na(doi)) |> 
-  filter(journal != "EM") |> 
-  rename(q1_is_sim_study = Q1_Is_sim_stufy) |> 
-  janitor::clean_names()
 ```
 
 
@@ -84,9 +77,9 @@ theme_bs <- function(){
                                          hjust = 0.5),
       plot.subtitle = ggplot2::element_text(size = ggplot2::rel(1.1),
                                             hjust = 0.5),
-      axis.text.x = ggplot2::element_text(face = "plain", size = 15),
-      axis.title.x = ggplot2::element_text(face = "plain", size = 18),
-      axis.title.y = ggplot2::element_text(face = "plain", size = 18),
+      axis.text.x = ggplot2::element_text(face = "plain", size = 20),
+      axis.title.x = ggplot2::element_text(face = "plain", size = 21),
+      axis.title.y = ggplot2::element_text(face = "plain", size = 21),
       axis.line = element_line(colour = "#6d6d6e"),
       
       # Faceting
@@ -123,7 +116,7 @@ theme_set(theme_bs())
 
 ## Q0/Q1: Proportion of Sim Studies per Journal/Year/Reviewer
 
-The following plot shows the number of simulation studies per journal.
+The following plot shows the number of simulation studies per journal (in the darker area) as a proportion of all studies per journal (combined with the non-sim studies in the lighter area).
 ```{r}
 q1_plot_max <- data_lr |> 
   count(journal) |> 
@@ -131,6 +124,7 @@ q1_plot_max <- data_lr |>
   max() * 1.1
 
 data_lr |> 
+  filter(q1_is_sim_study != "unclear") |> 
   ggplot(aes(x = journal, fill = journal, alpha = q1_is_sim_study)) +
     geom_bar(col = 1) +
     labs(x = NULL, 
@@ -212,7 +206,7 @@ data_lr |>
 ```
 
 
-Or proportional per journal:
+Or proportional per journal: 
 ```{r}
 data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
@@ -329,12 +323,15 @@ data_lr |>
   filter(q1_is_sim_study == "yes") |>
   filter(q2_mentions_missingness == "yes") |>
   filter(q3_report_dealing_with_missingness == "yes") |>
+  # order q3_1 by frequency
+  mutate(q3_1_method_dealing_with_missingness = fct_infreq(q3_1_method_dealing_with_missingness)) |>
   ggplot(aes(x = q3_1_method_dealing_with_missingness, fill = journal, group = journal))+
     geom_bar(col = 1)+
     labs(x = "Method of handling missingness", y = "Number of studies", fill = "Journal")+
     scale_fill_manual(values = cols)+
     scale_y_continuous(limits = c(0, q31_plot_max), expand = c(0,0))+
-    theme(panel.grid.major.x = element_blank())
+    theme(panel.grid.major.x = element_blank(),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
 
