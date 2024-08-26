@@ -31,6 +31,10 @@ all_res <- all_res |>
 all_res <- all_res |> 
   filter(!is.na(doi))
 
+# remove old econ papers
+all_res <- all_res |> 
+  filter(journal != "EM")
+
 
 # Fix data structure -----------------------------------------------------
 # Remove columns not used in the analyses
@@ -115,7 +119,7 @@ sim_res |>
 # convert to logical
 sim_res <- sim_res |> 
   dplyr::mutate(across(c(
-    contains("mentions_missingness"),
+    contains("mentions_missingness_"),
     contains("q2_1")
   ),
          ~as.logical(.)))
