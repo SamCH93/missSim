@@ -18,6 +18,7 @@ format:
     fig-width: 7
     fig-height: 4.5
     fig-align: "center"
+    embed-resources: true
 execute:
   message: false
   warning: false
@@ -272,9 +273,6 @@ data_lr |>
 ### Q2.1: Missingness Reporting
 How is missingness reported?
 
-```{r}
-
-```
 
 
 ### Q2.2: Missigness Summary
