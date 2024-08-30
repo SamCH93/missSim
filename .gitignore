@@ -50,3 +50,4 @@ rsconnect/
 
 # large data set from Carter et al. (2019)
 res.wide.red.RData
+missSim.Rproj

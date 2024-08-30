@@ -96,7 +96,7 @@ cols <- palette.colors(n = 4, palette = "Okabe-Ito")[-1]
 ggplot(data = carter2019summarieslong,
        aes(x = method, y = RR, color = Type)) +
   facet_grid(~ QRP) +
-  geom_vline(xintercept = seq(1.5, 6.5), lty = 3, alpha = 0.25) + 
+  geom_vline(xintercept = seq(1.5, 6.5), lty = 3, alpha = 0.25) +
   geom_hline(yintercept = 0.05, lty = 2, alpha = 0.6) +
   geom_errorbar(aes(ymin = RR - RRMCSE, ymax = RR + RRMCSE),
                 position = position_dodge(width = dodge), width = 0) +
@@ -106,7 +106,7 @@ ggplot(data = carter2019summarieslong,
             position = position_dodge(width = dodge), size = 3,
             show.legend = FALSE, hjust = 1) +
   labs(x = "Method", color = "", y = bquote("Type I error rate " %+-% "MCSE")
-       # subtitle = bquote("no publication bias," ~ "no heterogeneity (" * 
+       # subtitle = bquote("no publication bias," ~ "no heterogeneity (" *
        #                     tau == 0 * ")," ~ k == 10 ~ "studies")
   ) +
   scale_y_continuous(breaks = c(0, 0.025, 0.05, 0.075, 0.1), labels = scales::percent) +
@@ -158,29 +158,58 @@ plotA <- carter2019summary |>
     theme(panel.grid.minor = element_blank(),
           panel.grid.major = element_line(linetype = "dashed"))
 
-## Firth regression
-## library(logistf) # doesn't converge =)
-## firth1 <- logistf(missingcase ~ method*(k + delta + qrpEnv + censor + tau),
-##                   data = carter2019individual,
-##                   firth = TRUE, plcontrol = FALSE,
-##                   control = logistf.control(maxit = 1000))
-## summary(firth1)
-## library(brglm2) # this one converges but takes a while!
-## brglmfit <- glm(missingcase ~ method*(k + delta + qrpEnv + censor + tau),
-##                 data = carter2019individual,
-##                 family = binomial(link = "logit"),
-##                 method = "brglmFit",
-##                 type = "AS_mean",
-##                 trace = TRUE)
-## save(object = brglmfit, file = "brglmfit.rda") # very large
-## load("brglmfit.rda")
-## library(broom)
-## logistDF <- tidy(brglmfit) |>
-##     mutate(term = factor(term, levels = rev(tidy(brglmfit)$term)),
-##            lower = estimate - 1.96*std.error,
-##            upper = estimate + 1.96*std.error)
-## save(logistDF, file = "brglmsummary.rda")
-load("brglmsummary.rda")
+
+### evaluate missingness
+# use aggregated bernoulli for logistic regression
+carter2019summary_fit <- carter2019summary
+# change ordinal factors to factors (tibble)
+carter2019summary_fit$k      <- factor(carter2019summary_fit$k)
+carter2019summary_fit$delta  <- factor(carter2019summary_fit$delta)
+carter2019summary_fit$tau    <- factor(carter2019summary_fit$tau)
+carter2019summary_fit$qrpEnv <- factor(carter2019summary_fit$qrpEnv, ordered = FALSE)
+carter2019summary_fit$censor <- factor(carter2019summary_fit$censor, ordered = FALSE)
+
+fit_glm <- glm(cbind(1000*prop_missing, 1000) ~ method*(k + delta + qrpEnv + censor + tau),
+               data = carter2019summary_fit,
+               family = binomial)
+
+library(brglm2)
+fit_brglm <- glm(cbind(1000*prop_missing, 1000) ~ method*(k + delta + qrpEnv + censor + tau),
+                 data = carter2019summary_fit,
+                 family = binomial(link = "logit"),
+                 method = "brglmFit",
+                 type = "AS_mean",
+                 trace = TRUE)
+summary(fit_brglm)
+
+# fit lm to the individual data
+carter2019individual_fit <- carter2019individual
+carter2019individual_fit$k      <- factor(carter2019individual_fit$k)
+carter2019individual_fit$delta  <- factor(carter2019individual_fit$delta)
+carter2019individual_fit$tau    <- factor(carter2019individual_fit$tau)
+
+fit_lm <- lm(missingcase ~ method*(k + delta + qrpEnv + censor + tau),
+             data = carter2019individual_fit)
+summary(fit_lm)
+
+# factor importance
+anova(fit_lm)
+
+library(lsr)
+etaSquared(fit_lm) # takes couple minutes
+#                     eta.sq  eta.sq.part
+# method        4.458896e-02 4.890259e-02
+# k             9.526307e-04 1.097305e-03
+# delta         2.751415e-04 3.171742e-04
+# qrpEnv        1.987827e-05 2.292178e-05
+# censor        4.486852e-04 5.171264e-04
+# tau           1.510823e-02 1.712348e-02
+# method:k      9.260856e-03 1.056617e-02
+# method:delta  2.197361e-03 2.527446e-03
+# method:qrpEnv 4.115269e-03 4.723041e-03
+# method:censor 7.033764e-03 8.045612e-03
+# method:tau    4.879687e-02 5.327174e-02
+
 ## plotB <-
 logistDF <- logistDF |>
     mutate(coef = as.character(term),
