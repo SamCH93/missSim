@@ -7,6 +7,8 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(ggbeeswarm)
+library(broom)
+library(cowplot)
 ## setwd("case-studies/Carter2019")
 load("carter2019.rda")
 
@@ -169,18 +171,20 @@ carter2019summary_fit$tau    <- factor(carter2019summary_fit$tau)
 carter2019summary_fit$qrpEnv <- factor(carter2019summary_fit$qrpEnv, ordered = FALSE)
 carter2019summary_fit$censor <- factor(carter2019summary_fit$censor, ordered = FALSE)
 
-fit_glm <- glm(cbind(1000*prop_missing, 1000) ~ method*(k + delta + qrpEnv + censor + tau),
-               data = carter2019summary_fit,
-               family = binomial)
+## ## this shows complete separation and doesn't converge
+## fit_glm <- glm(cbind(1000*prop_missing, 1000) ~ method*(k + delta + qrpEnv + censor + tau),
+##                data = carter2019summary_fit,
+##                family = binomial)
 
-library(brglm2)
-fit_brglm <- glm(cbind(1000*prop_missing, 1000) ~ method*(k + delta + qrpEnv + censor + tau),
-                 data = carter2019summary_fit,
-                 family = binomial(link = "logit"),
-                 method = "brglmFit",
-                 type = "AS_mean",
-                 trace = TRUE)
-summary(fit_brglm)
+## ## Firth logistic regression to overcome complete separation
+## library(brglm2)
+## fit_brglm <- glm(cbind(1000*prop_missing, 1000) ~ method*(k + delta + qrpEnv + censor + tau),
+##                  data = carter2019summary_fit,
+##                  family = binomial(link = "logit"),
+##                  method = "brglmFit",
+##                  type = "AS_mean",
+##                  trace = TRUE)
+## summary(fit_brglm)
 
 # fit lm to the individual data
 carter2019individual_fit <- carter2019individual
@@ -195,51 +199,143 @@ summary(fit_lm)
 # factor importance
 anova(fit_lm)
 
-library(lsr)
-etaSquared(fit_lm) # takes couple minutes
-#                     eta.sq  eta.sq.part
-# method        4.458896e-02 4.890259e-02
-# k             9.526307e-04 1.097305e-03
-# delta         2.751415e-04 3.171742e-04
-# qrpEnv        1.987827e-05 2.292178e-05
-# censor        4.486852e-04 5.171264e-04
-# tau           1.510823e-02 1.712348e-02
-# method:k      9.260856e-03 1.056617e-02
-# method:delta  2.197361e-03 2.527446e-03
-# method:qrpEnv 4.115269e-03 4.723041e-03
-# method:censor 7.033764e-03 8.045612e-03
-# method:tau    4.879687e-02 5.327174e-02
+## library(lsr)
+## etaSquared(fit_lm) # takes couple minutes
+## #                     eta.sq  eta.sq.part
+## # method        4.458896e-02 4.890259e-02
+## # k             9.526307e-04 1.097305e-03
+## # delta         2.751415e-04 3.171742e-04
+## # qrpEnv        1.987827e-05 2.292178e-05
+## # censor        4.486852e-04 5.171264e-04
+## # tau           1.510823e-02 1.712348e-02
+## # method:k      9.260856e-03 1.056617e-02
+## # method:delta  2.197361e-03 2.527446e-03
+## # method:qrpEnv 4.115269e-03 4.723041e-03
+## # method:censor 7.033764e-03 8.045612e-03
+## # method:tau    4.879687e-02 5.327174e-02
 
+coefDF <- broom::tidy(fit_lm) |>
+    rename(coef = term) |>
+    mutate(type = case_when(!grepl(":", coef) ~ "Main effects",
+                            grepl(":k", coef) ~ "# Studies",
+                            grepl(":delta", coef) ~ "Effect",
+                            grepl(":qrpEnv", coef) ~ "QRPs",
+                            grepl(":censor", coef) ~ "Publication bias",
+                            grepl(":tau", coef) ~ "Heterogeneity"),
+           type = factor(type,
+                         levels = c("Main effects", "# Studies", "Effect",
+                                    "QRPs", "Publication bias", "Heterogeneity")),
+           subtype = case_when(grepl(":k30", coef) ~ "Studies = 30",
+                               grepl(":k60", coef) ~ "Studies = 60",
+                               grepl(":k100", coef) ~ "Studies = 100",
+                               grepl(":delta0.2", coef) ~ "Effect = 0.2",
+                               grepl(":delta0.5", coef) ~ "Effect = 0.5",
+                               grepl(":delta0.8", coef) ~ "Effect = 0.8",
+                               grepl(":qrpEnvmed", coef) ~ "QRPs = medium",
+                               grepl(":qrpEnvhigh", coef) ~ "QRPs = high",
+                               grepl(":censormed", coef) ~ "Publication bias = medium",
+                               grepl(":censorhigh", coef) ~ "Publication bias = high",
+                               grepl(":tau0.2", coef) ~ "Heterogeneity = medium",
+                               grepl(":tau0.4", coef) ~ "Heterogeneity = high",
+                               TRUE ~ "Main effects"),
+           subtype = factor(subtype,
+                            levels = c("Main effect", "Studies = 30",
+                                       "Studies = 60", "Studies = 100",
+                                       "Effect = 0.2", "Effect = 0.5",
+                                       "Effect = 0.8", "QRPs = medium", "QRPs = high",
+                                       "Publication bias = medium", "Publication bias = high",
+                                       "Heterogeneity = medium", "Heterogeneity = high")),
+           subtype2 = case_when(grepl(":k30", coef) ~ "30",
+                               grepl(":k60", coef) ~ "60",
+                               grepl(":k100", coef) ~ "100",
+                               grepl(":delta0.2", coef) ~ "small",
+                               grepl(":delta0.5", coef) ~ "medium",
+                               grepl(":delta0.8", coef) ~ "large",
+                               grepl(":qrpEnvmed", coef) ~ "medium",
+                               grepl(":qrpEnvhigh", coef) ~ "high",
+                               grepl(":censormed", coef) ~ "medium",
+                               grepl(":censorhigh", coef) ~ "high",
+                               grepl(":tau0.2", coef) ~ "medium",
+                               grepl(":tau0.4", coef) ~ "high",
+                               TRUE ~ " "),
+           method = stringr::str_extract(coef, "^[^:]*"),
+           method = gsub("method", "", method),
+           method = factor(method,
+                           levels = c("(Intercept)", "TF", "WAAP-WLS","p-curve",
+                                      "p-uniform", "PET-PEESE", "3PSM", "k30",
+                                      "k60", "k100", "delta0.2", "delta0.5",
+                                      "delta0.8", "qrpEnvmed", "qrpEnvhigh" ,
+                                      "censormed", "censorhigh", "tau0.2",
+                                      "tau0.4"),
+                           labels = c("Intercept", "TF", "WAAP-WLS","p-curve",
+                                      "p-uniform", "PET-PEESE", "3PSM", "# Studies = 30",
+                                      "# Studies = 60", "# Studies = 100", "effect = small", "effect = medium",
+                                      "effect = large", "QRPs = medium", "QRPs = high" ,
+                                      "PubBias = medium", "PubBias = high", "heterogeneity = medium",
+                                      "heterogeneity = high")),
+                           lower = estimate - qnorm(p = 0.995)*std.error,
+                           upper = estimate + qnorm(p = 0.995)*std.error,
+                           ## renaming coefficients
+                           coef = gsub("method", "", coef),
+                           coef = gsub(":delta", " : effect = ", coef),
+                           coef = gsub("delta", "effect = ", coef),
+                           coef = gsub(":k", " : # studies = ", coef),
+                           coef = gsub("k", "# studies = ", coef),
+                           coef = gsub(":qrpEnv", " : QRPs = ", coef),
+                           coef = gsub("qrpEnv", "QRPs = ", coef),
+                           coef = gsub(":censor", " : PubBias = ", coef),
+                           coef = gsub("censor", "PubBias = ", coef),
+                           coef = gsub(":tau", " : Heterogeneity = ", coef),
+                           coef = gsub("tau", "Heterogeneity = ", coef),
+                           coef = gsub("(Intercept)", "Intercept ", coef)
+                           )
+unique(coefDF$method)
 ## plotB <-
-logistDF <- logistDF |>
-    mutate(coef = as.character(term),
-           coef = gsub("method", "", coef),
-           coef = gsub("censormed", "pubBias=medium", coef),
-           coef = gsub("censorhigh", "pubBias=high", coef),
-           coef = gsub("qrpEnvmed", "QRP=medium", coef),
-           coef = gsub("qrpEnvhigh", "QRP=high", coef),
-           coef = gsub("k", "#studies", coef),
-           coef = gsub("tau", "heterogeneity", coef),
-           coef = gsub("delta", "effect", coef))
-plotB <- logistDF |>
-    mutate(coef = factor(coef, levels = rev(logistDF$coef))) |>
-    ggplot(aes(x = coef, y = estimate)) +
-    geom_hline(yintercept = 0, lty = 2, alpha = 0.3) +
-    geom_pointrange(aes(ymin = lower, ymax = upper,
-                        color = ifelse(lower > 0 | upper < 0, TRUE, FALSE)),
-                    show.legend = FALSE) +
-    lims(y = c(-20, 20)) +
-    labs(y = bquote("lower non-convergence" %<-% "Estimate"  %->% "higher non-convergence"),
-         x = "Logistic regression coefficient") +
-    scale_color_manual(values = c(1, 2)) +
-    coord_flip() +
-    theme_bw() +
-    theme(panel.grid.minor = element_blank())
+##     coefDF |>
+##     mutate(coef = factor(coef, levels = rev(coefDF$coef))) |>
+##     ggplot(aes(x = coef, y = estimate)) +
+##     facet_wrap(~ type, scales = "free", ncol = 1) +
+##     geom_hline(yintercept = 0, lty = 2, alpha = 0.3) +
+##     geom_pointrange(aes(ymin = lower, ymax = upper,
+##                         color = ifelse(lower > 0 | upper < 0, TRUE, FALSE)),
+##                     show.legend = FALSE, fatten = 1) +
+##     labs(y = bquote("lower non-convergence" %<-% "Estimate"  %->% "higher non-convergence"),
+##          x = "Regression coefficient") +
+##     scale_color_manual(values = c(1, 2)) +
+##     coord_flip() +
+##     theme_bw() +
+##     theme(panel.grid.minor = element_blank())
+## plot_grid(plotA, plotB, labels = c("A", "B"), ncol = 1, rel_heights = c(1/4, 3/4))
+## ggsave(filename = "fig-carter-exploring-missingness.pdf",
+##        width = 8, height = 12, scale = 1.4)
 
-library(cowplot)
-plot_grid(plotA, plotB, labels = c("A", "B"), ncol = 1, rel_heights = c(1/3, 2/3))
+
+subplots <- lapply(X = c("Main effects",  "# Studies",  "Effect", "QRPs",
+                         "Publication bias", "Heterogeneity"),
+                   FUN = function(typei) {
+                       coefDF |>
+                           filter(type == typei) |>
+                           mutate(method = factor(method, levels = rev(unique(coefDF$method))),
+                                  subtype2 = factor(subtype2, levels = unique(coefDF$subtype2))) |>
+                           ggplot(aes(x = method, y = estimate)) +
+                           facet_grid(subtype2 ~ type) +
+                           geom_hline(yintercept = 0, lty = 2, alpha = 0.3) +
+                           geom_pointrange(aes(ymin = lower, ymax = upper,
+                                               color = ifelse(lower > 0 | upper < 0, TRUE, FALSE)),
+                                           show.legend = FALSE, fatten = 1) +
+                           labs(y = NULL, x = NULL) +
+                           scale_color_manual(values = c(1, 2)) +
+                           coord_flip() +
+                           theme_bw() +
+                           theme(panel.grid.minor = element_blank(),
+                                 axis.text.y = element_text(size = rel(0.9)))
+                   })
+
+subplots[[6]] <- subplots[[6]] +
+    labs(y = bquote("lower non-convergence" %<-% "Estimate"  %->% "higher non-convergence"))
+plot_grid(plotlist = subplots, ncol = 1, rel_heights = c(1.4, 1.2, 1.2, 1, 1, 1))
 ggsave(filename = "fig-carter-exploring-missingness.pdf",
-       width = 8, height = 11, scale = 1)
+       width = 8.5, height = 11, scale = 1.25)
 
 ## ## decision tree
 ## library(rpart)
