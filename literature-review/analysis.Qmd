@@ -25,14 +25,7 @@ execute:
 ---
 
 # Background
-This document contains code to analyze the results of the literature review on missingness in simulation studies. 
-
-
-TODOS:
-
-- ensure that "yes" is always the darker shaded one where I use alpha
-
-
+This document contains code to analyze the results of the literature review on missingness in simulation studies.
 
 
 # Prep
@@ -43,12 +36,17 @@ library(tidyverse)
 library(here)
 library(sysfonts)
 library(readxl)
+library(cowplot)
+library(scales)
+library(ggpubr)
 
 # Load data
 data_lr <- readxl::read_xlsx(here("data/sim_res.xlsx"))
 
 # Remove entries for coding interrater agreement
 # TODO
+data_lr <- data_lr |> 
+  filter(id != "agreement" | is.na(id))
 ```
 
 
@@ -78,9 +76,9 @@ theme_bs <- function(){
                                          hjust = 0.5),
       plot.subtitle = ggplot2::element_text(size = ggplot2::rel(1.1),
                                             hjust = 0.5),
-      axis.text.x = ggplot2::element_text(face = "plain", size = 20),
-      axis.title.x = ggplot2::element_text(face = "plain", size = 21),
-      axis.title.y = ggplot2::element_text(face = "plain", size = 21),
+      axis.text.x = ggplot2::element_text(face = "plain", size = 24),
+      axis.title.x = ggplot2::element_text(face = "plain", size = 24),
+      axis.title.y = ggplot2::element_text(face = "plain", size = 24),
       axis.line = element_line(colour = "#6d6d6e"),
       
       # Faceting
@@ -103,7 +101,7 @@ theme_bs <- function(){
       panel.spacing.y = ggplot2::unit(1.6, "lines"),
       # Remove vertical grid lines
       panel.grid.major.x = ggplot2::element_blank(),
-      text = ggplot2::element_text(size = 30)
+      text = ggplot2::element_text(size = 33)
       
     )
 }
@@ -124,7 +122,7 @@ q1_plot_max <- data_lr |>
   pull(n) |> 
   max() * 1.1
 
-data_lr |> 
+q1_plot <- data_lr |> 
   filter(q1_is_sim_study != "unclear") |> 
   ggplot(aes(x = journal, fill = journal, alpha = q1_is_sim_study)) +
     geom_bar(col = 1) +
@@ -133,11 +131,12 @@ data_lr |>
          fill = "Journal") +
     # scale_fill_discrete_qualitative(palette = pal) + 
     scale_fill_manual(values = cols) +
-    scale_alpha_manual(values = c(0.33, 1), guide = "none") +
+    scale_alpha_manual(values = c(0.25, 1), guide = "none") +
     scale_y_continuous(limits = c(0, q1_plot_max), expand = c(0,0))+
     theme(panel.grid.major.x = element_blank(),
           legend.position = "none")+
     labs(y = NULL)
+q1_plot
 ```
 
 The following plot shows the proportion of simulation studies per year.
@@ -148,7 +147,7 @@ peryear_plot_max <- data_lr |>
   pull(n) |> 
   max() * 1.1
 
-data_lr |> 
+q1_plot_year <- data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   ggplot(aes(x = year, fill = journal)) +
     geom_bar(col = 1) +
@@ -160,6 +159,8 @@ data_lr |>
     scale_y_continuous(limits = c(0, peryear_plot_max), expand = c(0,0))+
     scale_x_continuous(breaks = seq(2018, 2023, 1))+
     labs(y = NULL)
+
+q1_plot_year
 ```
 
 
@@ -171,7 +172,7 @@ reviewer_plot_max <- data_lr |>
   pull(n) |>
   max() * 1.1
 
-data_lr |> 
+q1_plot_rev <- data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   ggplot(aes(x = reviewer, fill = journal)) +
     geom_bar(col = 1) +
@@ -182,6 +183,7 @@ data_lr |>
     theme(panel.grid.major.x = element_blank())+
     scale_y_continuous(limits = c(0, reviewer_plot_max), expand = c(0,0))+
     labs(y = NULL)
+q1_plot_rev
 ```
 
 
@@ -196,7 +198,7 @@ q2_plot_max <- data_lr |>
   count() |> 
   pull(n) * 1.1
 
-data_lr |> 
+q2_plot <- data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   ggplot(aes(x = q2_mentions_missingness, fill = journal, group = journal))+
     geom_bar(col = 1)+
@@ -204,12 +206,26 @@ data_lr |>
     scale_fill_manual(values = cols)+
     theme(panel.grid.major.x = element_blank())+
     scale_y_continuous(limits = c(0, q2_plot_max), expand = c(0,0))
+q2_plot
 ```
 
 
 Or proportional per journal: 
 ```{r}
-data_lr |> 
+# obtain raw numbers of "yes" mentions per journal
+q2_plot_prop_numbers <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  # divide number of "yes" mentions by total number of studies per journal
+  count(journal, q2_mentions_missingness) |>
+  group_by(journal) |>
+  mutate(pos = n/sum(n)) |>
+  filter(q2_mentions_missingness == "yes") |> 
+  # hard code positioning
+  mutate(pos = ifelse(journal == "JASA", pos+0.035, pos)) |> 
+  mutate(pos = ifelse(journal == "SiM", pos+0.03, pos))
+
+
+q2_plot_prop <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
   ggplot(aes(alpha = q2_mentions_missingness, 
              x = journal, 
@@ -220,11 +236,20 @@ data_lr |>
          fill = "Journal",
          alpha = "")+
     scale_y_continuous(labels = scales::percent_format(),
+                       breaks = seq(0, 1, 0.1),
                        limits = c(0,1), expand = c(0,0))+
-    scale_alpha_manual(values = c(0.33, 1), guide = "none")+
+    scale_alpha_manual(values = c(0.25, 1), guide = "none")+
     scale_fill_manual(values = cols)+
     theme(panel.grid.major.x = element_blank(),
-          legend.position = "none")
+          legend.position = "none")+
+    # add text labels with raw numbers 
+    geom_text(data = q2_plot_prop_numbers, 
+              aes(label = n, 
+                  y = pos,), 
+                position = position_stack(vjust = 1.09),  # Adjust vjust to move the labels above the lower bar
+              size = 10)
+
+q2_plot_prop
 ```
 
 
@@ -242,7 +267,7 @@ q2a_plot_max <- data_lr |>
   pull(n) |> 
   max() * 1.1
 
-data_lr |> 
+q2a_plot <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
   filter(q2_mentions_missingness == "yes") |> 
   pivot_longer(cols = all_of(contains("mentions_missingness_")), 
@@ -264,20 +289,93 @@ data_lr |>
            col = 1) +
   labs(x = "Place of Missingness Mention", y = "Number of Studies", fill = "Journal")+
   scale_fill_manual(values = cols)+
-  scale_y_continuous(limits = c(0, q2a_plot_max), expand = c(0,0))+
-  theme(panel.grid.major.x = element_blank())
+  scale_y_continuous(limits = c(0, q2a_plot_max), expand = c(0,0))
+q2a_plot
 ```
 
 
 
 ### Q2.1: Missingness Reporting
-How is missingness reported?
+How is missingness reported if it is mentioned? This excludes the additional 'other' comment for now.
+
+```{r}
+q2_1_plot_max <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+  group_by(journal) |>
+  count() |> 
+  pull(n) |> 
+  max() * 1.1
+
+
+q2_1_plot <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+  select(journal, q2_1a_missingness_sumarized_text,
+         q2_1b_missingness_sumarized_table, q2_1c_missingness_sumarized_visualization) |> 
+  pivot_longer(cols = -journal, 
+               names_to = "missingness_reporting", 
+               values_to = "value") |> 
+  filter(value == TRUE) |> 
+  group_by(journal, missingness_reporting) |>
+  summarise(reporting_count = n()) |>
+  mutate(missingness_reporting = case_match(missingness_reporting,
+    "q2_1a_missingness_sumarized_text" ~ "Text",
+    "q2_1b_missingness_sumarized_table" ~ "Table",
+    "q2_1c_missingness_sumarized_visualization" ~ "Visualization",
+  )) |>
+  ggplot(aes(x = missingness_reporting, y = reporting_count, fill = journal, group = journal))+
+  geom_bar(stat = "identity", 
+           position = position_dodge2(preserve = "single"), 
+           col = 1) +
+  labs(x = "Missingness Reporting", y = "Number of Studies", fill = "Journal")+
+  scale_fill_manual(values = cols)+
+  scale_y_continuous(limits = c(0, q2_1_plot_max), expand = c(0,0))+
+  theme_bs()
+q2_1_plot
+```
+
 
 
 
 ### Q2.2: Missigness Summary
 
-How are the missing cases summarized?
+How are the missing cases summarized? 'Prop.' stands for proportion, so 'prop. (method/condition)' would be the missingness proportion per method and condition.
+
+```{r}
+q2_2_plot_max <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+  count(q2_2_missingness_summarized) |> 
+  pull(n) |> 
+  max() * 1.1
+
+
+q2_2_plot <- data_lr |>
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+    mutate(q2_2_missingness_summarized = case_match(q2_2_missingness_summarized,
+       "missing proportion (total)" ~ "prop.",
+       "missing proportion (per method/condition)" ~ "prop. (method/condition)",
+       "max missing proportion (per method/condition)" ~ "max prop. (method/condition)",
+       "missing proportion (per method)" ~ "prop. (method)",
+       "max missing proportion (per method)" ~ "max prop. (method)",
+       "zero missingness" ~ "no missingness",
+       .default = q2_2_missingness_summarized
+    
+  )) |> 
+  mutate(q2_2_missingness_summarized = fct_infreq(q2_2_missingness_summarized)) |> 
+  ggplot(aes(x = q2_2_missingness_summarized, fill = journal, group = journal))+
+  geom_bar(col = 1)+
+  labs(x = "Missingness Summary", y = "Number of Studies", fill = "Journal")+
+  scale_fill_manual(values = cols)+
+  scale_y_continuous(limits = c(0, q2_2_plot_max), expand = c(0,0))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+q2_2_plot
+```
+
+
 
 ## Q3: Handling of Missingness
 
@@ -291,7 +389,7 @@ q3_plot_max <- data_lr |>
   count() |> 
   pull(n) * 1.1
 
-data_lr |> 
+q3_plot <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
   filter(q2_mentions_missingness == "yes") |> 
   ggplot(aes(x = q3_report_dealing_with_missingness, fill = journal, group = journal))+
@@ -300,7 +398,52 @@ data_lr |>
     scale_fill_manual(values = cols)+
     scale_y_continuous(limits = c(0, q3_plot_max), expand = c(0,0))+
     theme(panel.grid.major.x = element_blank())
+q3_plot
 ```
+
+Or, alternatively, with an own category for "missingness not mentioned":
+```{r}
+q3_nonmention_plot_max <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "no") |> 
+  count() |> 
+  pull(n) |> 
+  max() * 1.1
+
+
+# calculate raw numbers
+q3_nonmention_counts <- data_lr |>
+  filter(q1_is_sim_study == "yes") |> 
+  mutate(q3_report_dealing_with_missingness = if_else(q2_mentions_missingness == "no", 
+                                                      "not mentioned", 
+                                                      q3_report_dealing_with_missingness)) |> 
+  count(q3_report_dealing_with_missingness)
+
+
+q3_plot_nonmention <- data_lr |>
+  filter(q1_is_sim_study == "yes") |> 
+  mutate(q3_report_dealing_with_missingness = if_else(q2_mentions_missingness == "no", 
+                                                      "not mentioned", 
+                                                      q3_report_dealing_with_missingness)) |>
+  mutate(q3_report_dealing_with_missingness = factor(q3_report_dealing_with_missingness, 
+                                                     levels = c("not mentioned", 
+                                                                "no", 
+                                                                "unclear", 
+                                                                "yes"))) |>  
+  ggplot(aes(x = q3_report_dealing_with_missingness, fill = journal, group = journal))+
+    geom_bar(col = 1)+
+    labs(x = "Indicated how missingness was handled", y = "Number of Studies", fill = "Journal")+
+    scale_fill_manual(values = cols)+
+    scale_y_continuous(limits = c(0, q3_nonmention_plot_max), expand = c(0,0))+
+    theme(panel.grid.major.x = element_blank())+
+    # add raw numbers
+    geom_text(data = q3_nonmention_counts, 
+              aes(x = q3_report_dealing_with_missingness, y = n, label = n), 
+              vjust = -0.5, size = 10, inherit.aes = FALSE)
+
+q3_plot_nonmention
+```
+
 
 
 ### Q3.1: Method of Handling Missingness
@@ -317,19 +460,30 @@ q31_plot_max <- data_lr |>
   pull(n) |> 
   max() * 1.1
 
-data_lr |> 
+q3_1_plot <- data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   filter(q2_mentions_missingness == "yes") |>
   filter(q3_report_dealing_with_missingness == "yes") |>
+  # change NA to "outcome"
+  mutate(q3_1_method_dealing_with_missingness = if_else(is.na(q3_1_method_dealing_with_missingness), 
+                                                        "outcome", 
+                                                        q3_1_method_dealing_with_missingness)) |>
+  mutate(q3_1_method_dealing_with_missingness = case_match(q3_1_method_dealing_with_missingness,
+                                                           "additional simulations" ~ "add sims",
+                                                           "method replacement" ~ "replace method",
+                                                           .default = q3_1_method_dealing_with_missingness)) |> 
+  
   # order q3_1 by frequency
   mutate(q3_1_method_dealing_with_missingness = fct_infreq(q3_1_method_dealing_with_missingness)) |>
   ggplot(aes(x = q3_1_method_dealing_with_missingness, fill = journal, group = journal))+
     geom_bar(col = 1)+
     labs(x = "Method of handling missingness", y = "Number of studies", fill = "Journal")+
+    scale_x_discrete(labels = scales::label_wrap(10))+
     scale_fill_manual(values = cols)+
     scale_y_continuous(limits = c(0, q31_plot_max), expand = c(0,0))+
-    theme(panel.grid.major.x = element_blank(),
-          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+    theme(panel.grid.major.x = element_blank())
+          # axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+q3_1_plot
 ```
 
 
@@ -347,7 +501,7 @@ q32_plot_max <- data_lr |>
   pull(n) |> 
   max() * 1.1
 
-data_lr |> 
+q3_2_plot <- data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   filter(q2_mentions_missingness == "yes") |>
   filter(q3_report_dealing_with_missingness == "yes") |>
@@ -357,6 +511,7 @@ data_lr |>
     scale_fill_manual(values = cols)+
     scale_y_continuous(limits = c(0, q32_plot_max), expand = c(0,0))+
     theme(panel.grid.major.x = element_blank())
+q3_2_plot
 ```
 
 
@@ -373,7 +528,7 @@ q33_plot_max <- data_lr |>
   pull(n) |> 
   max() * 1.1
 
-data_lr |> 
+q3_3_plot <- data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   filter(q2_mentions_missingness == "yes") |>
   filter(q3_report_dealing_with_missingness == "yes") |>
@@ -384,6 +539,8 @@ data_lr |>
     scale_fill_manual(values = cols)+
     scale_y_continuous(limits = c(0, q33_plot_max), expand = c(0,0))+
     theme(panel.grid.major.x = element_blank())
+
+q3_3_plot
 ```
 
 
@@ -398,7 +555,7 @@ q4_plot_max <- data_lr |>
   pull(n) |> 
   max() * 1.1
 
-data_lr |> 
+q4_plot <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
   ggplot(aes(x = q4_code_available, fill = journal, group = journal))+
     geom_bar(col = 1)+
@@ -406,25 +563,263 @@ data_lr |>
     scale_fill_manual(values = cols)+
     scale_y_continuous(limits = c(0, q4_plot_max), expand = c(0,0))+
     theme(panel.grid.major.x = element_blank())
+q4_plot
 ```
 
 The same, but per journal:
 ```{r}
-data_lr |> 
+# compute raw numbers and proportions
+q4_counts <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(!is.na(q4_code_available)) |>
+  group_by(journal, q4_code_available) |>
+  count() |> 
+  group_by(journal) |> 
+  mutate(prop = n/sum(n))
+
+
+
+q4_plot_prop <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
   filter(!is.na(q4_code_available)) |>
   ggplot(aes(alpha = q4_code_available, x = journal, fill = journal))+
     geom_bar(col = 1, position = "fill")+
   theme(legend.position = "none") + 
-   scale_alpha_manual(values = c(0.33, 1), guide = "none") +
+   scale_alpha_manual(values = c(0.25, 1), guide = "none") +
   scale_y_continuous(labels = scales::percent_format(),
                      limits = c(0,1), expand = c(0,0)) +
     labs(x = "Journal", y = "Proportion of Studies with Code", fill = "Journal")+
-    scale_fill_manual(values = cols)
+    scale_fill_manual(values = cols) +
+   geom_text(data = q4_counts, 
+             aes(x = journal,
+                 y = prop, 
+                 group = q4_code_available,
+                 label = n), 
+             position = position_stack(vjust = 0.5), 
+             size = 10,
+             inherit.aes = FALSE)
+q4_plot_prop
 ```
 
 # Combined Plots for Manuscript
 
+## Tweak existing plots
+First, slightly tweak the plots for the combined figure:
+```{r}
+# obtain counts for plotting
+q2_plot_counts <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  count(q2_mentions_missingness) |>
+  mutate(prop = n/sum(n))
+
+
+q2_plot_max_pub <- q2_plot_max * 1.05
+q2_plot_pub <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |>
+  ggplot(aes(x = q2_mentions_missingness, fill = journal, group = journal))+
+    geom_bar(col = 1)+
+    labs(x = "Mentions missingness", y = "Number of studies", fill = "Journal")+
+    scale_fill_manual(values = cols)+
+    theme(panel.grid.major.x = element_blank())+
+    scale_y_continuous(limits = c(0, q2_plot_max_pub), expand = c(0, 0.2))+
+    geom_text(data = q2_plot_counts, 
+              aes(x = q2_mentions_missingness,
+                  y = n,
+                  label = n), 
+              vjust = -0.5,
+              size = 5.8,
+              inherit.aes = FALSE)+
+   theme(legend.position = "none",
+                                  text = element_text(size = 18),
+                                  axis.text.x = element_text(size = 18),
+         axis.text.y = element_text(size = 18),
+                                  axis.title.y = element_text(size = 16))+
+                            labs(x = NULL,
+                                 y = NULL,
+                                 title = "Missingness mentioned?")
+
+
+q3_nonmention_plot_max_pub <- q3_nonmention_plot_max * 1.1
+q3_plot_nonmention_pub <- data_lr |>
+  filter(q1_is_sim_study == "yes") |> 
+  mutate(q3_report_dealing_with_missingness = if_else(q2_mentions_missingness == "no", 
+                                                      "not mentioned", 
+                                                      q3_report_dealing_with_missingness)) |>
+  mutate(q3_report_dealing_with_missingness = factor(q3_report_dealing_with_missingness, 
+                                                     levels = c("not mentioned", 
+                                                                "no", 
+                                                                "unclear", 
+                                                                "yes"))) |>  
+  ggplot(aes(x = q3_report_dealing_with_missingness, fill = journal, group = journal))+
+    geom_bar(col = 1)+
+    labs(x = "Indicated how missingness was handled", y = "Number of Studies", fill = "Journal")+
+    scale_fill_manual(values = cols)+
+    scale_y_continuous(limits = c(0, q3_nonmention_plot_max_pub), expand = c(0, 0.2))+
+    # add raw numbers
+    geom_text(data = q3_nonmention_counts, 
+              aes(x = q3_report_dealing_with_missingness, y = n, label = n), 
+              vjust = -0.5, size = 5.8, inherit.aes = FALSE) + 
+                             theme(legend.position = "none",
+                                  text = element_text(size = 18),
+                                  axis.text.x = element_text(size = 18),
+                                  axis.text.y = element_text(size = 18),
+                                  axis.title.y = element_text(size = 16))+
+                             labs(x = NULL,
+                                  y = NULL,
+                                  title = "Missingness handling reported?")+
+  ggpubr::geom_bracket(xmin = 1.75, xmax = 4.25, 
+               inherit.aes = FALSE, label = "If mentioned",
+               y.position = 130, label.size = 5.8)
+
+
+# obtain counts for plotting
+q3_1_plot_counts <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+  filter(q3_report_dealing_with_missingness == "yes") |> 
+    mutate(
+    q3_1_method_dealing_with_missingness = if_else(
+      is.na(q3_1_method_dealing_with_missingness),
+      "outcome",
+      q3_1_method_dealing_with_missingness
+    )
+  ) |>
+  mutate(
+    q3_1_method_dealing_with_missingness = case_match(
+      q3_1_method_dealing_with_missingness,
+      "additional simulations" ~ "add sims",
+      "method replacement" ~ "replace",
+      "case-wise deletion" ~ "case- wise",
+      "list-wise deletion" ~ "list- wise",
+      .default = q3_1_method_dealing_with_missingness
+    )
+  ) |>
+  # don't plot outcome
+  filter(q3_1_method_dealing_with_missingness != "outcome") |>
+  count(q3_1_method_dealing_with_missingness) |>
+  mutate(prop = n/sum(n))
+
+q31_plot_max_pub <- q31_plot_max * 1.05
+q3_1_plot_pub <- data_lr |>
+  filter(q1_is_sim_study == "yes") |>
+  filter(q2_mentions_missingness == "yes") |>
+  filter(q3_report_dealing_with_missingness == "yes") |>
+  # change NA to "outcome"
+  mutate(
+    q3_1_method_dealing_with_missingness = if_else(
+      is.na(q3_1_method_dealing_with_missingness),
+      "outcome",
+      q3_1_method_dealing_with_missingness
+    )
+  ) |>
+  mutate(
+    q3_1_method_dealing_with_missingness = case_match(
+      q3_1_method_dealing_with_missingness,
+      "additional simulations" ~ "add sims",
+      "method replacement" ~ "replace",
+      "case-wise deletion" ~ "case- wise",
+      "list-wise deletion" ~ "list- wise",
+      .default = q3_1_method_dealing_with_missingness
+    )
+  ) |>
+  filter(q3_1_method_dealing_with_missingness != "outcome") |> 
+  # order q3_1 by frequency
+  mutate(q3_1_method_dealing_with_missingness = fct_infreq(q3_1_method_dealing_with_missingness)) |>
+  ggplot(aes(x = q3_1_method_dealing_with_missingness, fill = journal, group = journal)) +
+  geom_bar(col = 1) +
+  geom_text(data = q3_1_plot_counts, 
+            aes(x = q3_1_method_dealing_with_missingness, 
+                y = n, 
+                label = n), 
+            vjust = -0.5, 
+            size = 5.8, 
+            inherit.aes = FALSE) +
+  labs(x = "Method of handling missingness", y = "Number of studies", fill = "Journal") +
+  scale_x_discrete(labels = scales::label_wrap(4)) +
+  scale_fill_manual(values = cols) +
+  scale_y_continuous(limits = c(0, q31_plot_max_pub), expand = c(0, 0.2)) +
+  theme(legend.position = "none",
+                                  text = element_text(size = 18),
+                                  axis.text.x = element_text(size = 18),
+                                  axis.text.y = element_text(size = 18))+
+                             labs(x = NULL,
+                                  y = NULL,
+                                  title = "Method of handling missingness reported?")
+
+
+
+q4_plot_prop_pub <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(!is.na(q4_code_available)) |>
+  ggplot(aes(alpha = q4_code_available, x = journal, fill = journal))+
+    geom_bar(col = 1, position = "fill")+
+  theme(legend.position = "none") + 
+   scale_alpha_manual(values = c(0.25, 1), guide = "none") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0,1), expand = c(0,0)) +
+    labs(x = "Journal", y = "Proportion of Studies with Code", fill = "Journal")+
+    scale_fill_manual(values = cols) +
+   geom_text(data = q4_counts, 
+             aes(x = journal,
+                 y = prop, 
+                 group = q4_code_available,
+                 label = n), 
+             position = position_stack(vjust = 0.5), 
+             size = 5.8,
+             inherit.aes = FALSE)+
+    theme(legend.position = "none",
+          text = element_text(size = 18),
+                                  axis.text.x = element_text(size = 18),
+                                  axis.text.y = element_text(size = 18),
+          axis.title.y = element_text(size = 16))+
+    labs(x = NULL,
+         y = NULL,
+         title = "Code for simulation study available?")+
+  theme(panel.background = element_rect(colour = "#F3F4F5"))
+```
+
+
+## Combine into one plot
+Combine plots for Q2 (Mention of Missingness per Journal), Q3 (Handling of Missingness per Journal) Q3.1 (Method of Handling Missingness per Journal), Q4 (Code availability):
+```{r}
+# create a shared legend
+leg_plot <- q2_plot +
+  theme(legend.text = element_text(size = 16),
+        legend.title = element_text(size = 16))
+
+legend <- cowplot::get_plot_component(leg_plot, 'guide-box-top', return_all = TRUE)
+
+
+
+# combine plots
+# only use one legend for all plots
+p_c <- cowplot::plot_grid(q2_plot_pub, 
+                          q3_plot_nonmention_pub, 
+                           q3_1_plot_pub,
+                           q4_plot_prop_pub,
+                   nrow = 2, labels = c("A", "B", "C", "D"), label_size = 18,
+                   align = "h",
+                   scale = 0.95)
+
+p_c_leg <- cowplot::plot_grid(legend,
+                              p_c, 
+                              nrow = 2, 
+                              ncol = 1, 
+                              rel_widths = 
+                                c(0.3, 1),
+                              rel_heights = c(0.05, 1))
+
+p_c_leg
+
+
+```
+
+Save plots:
+```{r, eval = FALSE}
+ggsave("literature-review/figures/fig_lit_review_results.pdf", p_c_leg, width = 15*0.76, height = 10*0.76)
+```
+
+ 
 
 # Descriptives
 Create one large table with descriptive stats:
