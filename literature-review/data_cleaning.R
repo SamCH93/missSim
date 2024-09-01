@@ -35,6 +35,11 @@ all_res <- all_res |>
 all_res <- all_res |> 
   filter(journal != "EM")
 
+# remove pilot studies
+all_res <- all_res |> 
+  filter(!grepl("*p", id)) |> 
+  filter(q6_comments != "pilot" | is.na(q6_comments))
+
 
 # Fix data structure -----------------------------------------------------
 # Remove columns not used in the analyses
@@ -71,12 +76,22 @@ sim_res |>
 
 
 # Q3: studies that mention missingness should mention how it handled
+# if NA, we code as not reported
 sim_res |> 
   dplyr::filter(q1_is_sim_study == "yes") |> 
   dplyr::filter(q2_mentions_missingness == "yes") |> 
   # select columns that show different places of missingness mentioning
   select(reviewer, doi, q3_report_dealing_with_missingness) |> 
   filter(is.na(q3_report_dealing_with_missingness))
+
+# change to "no"
+sim_res <- sim_res |> 
+  mutate(q3_report_dealing_with_missingness = ifelse(is.na(q3_report_dealing_with_missingness) & 
+                                                       q1_is_sim_study == "yes" &
+                                                       q2_mentions_missingness == "yes", 
+                                                     "no", 
+                                                     q3_report_dealing_with_missingness))
+
 
 
 # Q3: If authors reported how they dealt with it
@@ -120,7 +135,9 @@ sim_res |>
 sim_res <- sim_res |> 
   dplyr::mutate(across(c(
     contains("mentions_missingness_"),
-    contains("q2_1")
+    q2_1a_missingness_sumarized_text,
+    q2_1b_missingness_sumarized_table, 
+    q2_1c_missingness_sumarized_visualization
   ),
          ~as.logical(.)))
   
