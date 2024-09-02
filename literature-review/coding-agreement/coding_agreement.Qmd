@@ -32,46 +32,27 @@ library(tidyverse)
 library(here)
 
 ## data
-sim_res_fac <- readRDS(file = here("data/sim_res_fac.RDS"))
-
-sim_res_fac  <- sim_res_fac[sim_res_fac$simstudy_q1 == "yes",]
+sim_res <- readRDS(file = here("data/sim_res.RDS"))
 
 # Some cleaning
-sim_res_fac_clean <- sim_res_fac %>% 
+sim_res_clean <- sim_res %>% 
   # ignore irrelevant cols
-    select(!c(x1, year, issue, journal, quoteaims_q3, ncondsnotes_q6,
-              nsimjustifiednotes_q9, pmnotes_q15, codelink_q20)) %>% 
-  # add missing "whichsim"
-  mutate(whichsim = ifelse(is.na(whichsim), 1, whichsim)) %>% 
-  # remove trailing zero after dot
-  mutate(across(everything(),
-                ~gsub("\\.0$", "", .))) %>% 
-  # for certain columns, NA is treated as unclear
-  mutate(across(c(nsim_q8, nestimands_q11, pmsclear_q15, mcerrors_q16),
-                ~gsub("NA", "unclear", .))) %>% 
-  mutate(nestimands_q11 = ifelse(is.na(nestimands_q11),
-                                       "unclear", nestimands_q11)) %>% 
-  mutate(mcerrors_q16 = ifelse(is.na(mcerrors_q16),
-                                       "unclear", mcerrors_q16)) %>% 
-  # remove '+' or '?' from certain columns
-  mutate(nestimands_q11 = gsub("+", "", nestimands_q11),
-         nestimands_q11 = gsub("?", "", nestimands_q11)) %>% 
-  # some manual recoding of open-text columns (such that order is equal for
-  # assessment and agreement)
-  mutate(mcerrors_q16 = ifelse(doi == "https://doi.org/10.3758/s13428-021-01580-y",
-                               "plot, table", mcerrors_q16))
+  select(!c(year, issue, journal, q2_1d_missingnenss_sumarized_other, 
+            contains("comment"), q5_is_example, q7_coding_confidence)) |> 
+  # for now, also filter pilot studies
+  filter(is.na(id) | id == "agreement")
 
-coding_orig  <- data.frame(sim_res_fac_clean[sim_res_fac_clean$coding_type == "assessment",])
-coding_test  <- data.frame(sim_res_fac_clean[sim_res_fac_clean$coding_type == "agreement",])
+coding_orig  <- sim_res_clean |> 
+  filter(id != "agreement" | is.na(id)) |> 
+  select(!id)
+coding_test  <- sim_res_clean |> 
+  filter(id == "agreement") |> 
+  select(!id)
 
 agreement_matrix <- matrix(NA, ncol = ncol(coding_test), nrow = nrow(coding_test))
 rownames(agreement_matrix) <- coding_test$doi
 colnames(agreement_matrix) <- colnames(coding_test)
 agreement_matrix <- data.frame(agreement_matrix)
-
-# fix one DOI name issue
-coding_orig$doi[coding_orig$doi == "https://doi.org/10.1037/met0000386\r\n"] <- "https://doi.org/10.1037/met0000386"
-
 ```
 
 
@@ -84,6 +65,9 @@ for(j in 1:ncol(agreement_matrix)){
     this_test <- coding_test[i,j]
     this_orig <- coding_orig[coding_orig$doi == coding_test$doi[i],j]
     
+    if(length(is.na(this_orig)) > 1){
+        next(paste0("Multiple values for this_orig with index", i, " and column", j, " in coding_orig"))
+      }
     if(is.na(this_orig)){
       this_orig <- "coded as NA"
     }
@@ -108,82 +92,141 @@ print(disagreements)
 ```
 
 
-```{r fig.align = "center", fig.height = 15, fig.width = 10}
-par(mar = c(4, 10, 0, 0))
-barplot(apply(agreement_matrix, 2, mean), horiz = TRUE, las = 1, xlab = "Proportion agreement")
-
-```
-
 
 Figure for the paper:
-```{r fig.align = "center", fig.height = 8, fig.width = 5*1.5}
-theme_bs <- function(){
-  # add google font
-  sysfonts::font_add_google("News Cycle", "news")
-  # use showtext
-  showtext::showtext_auto()
-  # theme
-  ggplot2::theme_bw(base_family = "news") + 
-  ggplot2::theme(
-    legend.position = "top",
-    panel.grid.minor = element_blank(),
-    
-    # Title and Axis Texts
-    plot.title = ggplot2::element_text(size = ggplot2::rel(1.2), hjust = 0.5),
-    plot.subtitle = ggplot2::element_text(size = ggplot2::rel(1.1), hjust = 0.5),
-    axis.title = ggplot2::element_text(size = ggplot2::rel(1.15)),
-    axis.text = ggplot2::element_text(size = ggplot2::rel(1.1)),
-    axis.text.x = ggplot2::element_text(margin = ggplot2::margin(5, b = 10))
-  )
-}
-theme_set(theme_bs())
 
-agreement_plot <- agreement_matrix %>% 
-  as.data.frame() %>% 
-  # filter studies where we reviewed different sims for now (so whichsim == TRUE/1)
-  filter(whichsim == 1) %>% 
-  apply(., 2, mean) %>% 
-  as.data.frame() %>% 
-  tibble::rownames_to_column(var = "Question") %>% 
-  rename("Agreement" = ".") %>% 
-  filter(!Question %in% c("whichsim", "doi", "reviewer", 
-                          "pmother_q15", "coding_confidence", "coding_type")) %>% 
-  mutate(Question = factor(Question, levels = Question)) %>%
-  mutate(Question = forcats::fct_rev(Question)) %>% 
+TODO fix this one NA
+```{r fig.align = "center", fig.height = 8, fig.width = 5*1.5}
+
+# add google font
+sysfonts::font_add_google("News Cycle", "news")
+# use showtext
+showtext::showtext_auto()
+
+theme_bs <- function(){
+
+  
+  # theme
+  ggplot2::theme_minimal(base_family = "news") +
+    ggplot2::theme(
+      # remove minor grid
+      panel.grid.minor = ggplot2::element_blank(),
+      # Title and Axis Texts
+      plot.title = ggplot2::element_text(face = "plain",
+                                         size = ggplot2::rel(1.2),
+                                         hjust = 0.5),
+      plot.subtitle = ggplot2::element_text(size = ggplot2::rel(1.1),
+                                            hjust = 0.5),
+      axis.text.x = ggplot2::element_text(face = "plain", size = 16),
+      axis.title.x = ggplot2::element_text(face = "plain", size = 16),
+      axis.title.y = ggplot2::element_text(face = "plain", size = 16),
+      axis.line = element_line(colour = "#6d6d6e"),
+      
+      # Faceting
+      strip.text = ggplot2::element_text(face = "plain",
+                                         size = ggplot2::rel(1.1),
+                                         hjust = 0.5),
+      strip.text.x.top = ggplot2::element_text(face = "plain", 
+                                               size = ggplot2::rel(1.2),
+                                               hjust = 0.5),
+      # strip.text.y = element_blank(),
+      strip.background = ggplot2::element_rect(fill = NA, color = NA),
+      # Grid
+      panel.grid = ggplot2::element_line(colour = "#F3F4F5"),
+      # Legend
+      legend.title = ggplot2::element_text(face = "plain"),
+      legend.position = "top",
+      legend.justification = 1,
+      # Panel/Facets
+      panel.spacing.x = ggplot2::unit(1.6, "lines"),
+      panel.spacing.y = ggplot2::unit(1.6, "lines"),
+      # Remove vertical grid lines
+      panel.grid.major.x = ggplot2::element_blank(),
+      text = ggplot2::element_text(size = 24)
+      
+    )
+}
+
+
+prop_and_ci <- function(x){  
+  x <- na.omit(x)
+  n <- length(x)
+  success <- sum(x)
+  
+  # Perform binom.test
+  test_result <- binom.test(success, n)
+  
+  proportion <- test_result$estimate
+  ci_lower <- test_result$conf.int[1]
+  ci_upper <- test_result$conf.int[2]
+  
+  # Return results as a named vector
+  return(c(proportion = proportion, ci_lower = ci_lower, ci_upper = ci_upper))
+}
+
+
+
+agreement_plot <- agreement_matrix |> 
+    as.data.frame() |> 
+    select(-c("doi", "reviewer")) |>
+    reframe(across(everything(), prop_and_ci)) |> 
+    t() |> 
+    magrittr::set_colnames(c("Agreement", "ci_l", "ci_h")) |> 
+  as.data.frame() |> 
+  rownames_to_column(var = "Question") |>
+  mutate(Question = case_match(Question,
+                               "q1_is_sim_study" ~ "Q1: Contains sim study?",
+                               "q2_mentions_missingness" ~ "Q2: M mentioned?",
+                               "q2a_mentions_missingness_discussion" ~ "Q2a: ...in discussion?",
+                               "q2b_mentions_missingness_data_generation" ~ "Q2b: ...in data generation?",
+                               "q2c_mentions_missingness_results" ~ "Q2c: ...in results?",
+                               "q2_1a_missingness_sumarized_text" ~ "Q2.1a: M summarized in text?",
+                               "q2_1b_missingness_sumarized_table" ~ "Q2.1b: M summarized in table?",
+                               "q2_1c_missingness_sumarized_visualization" ~ "Q2.1c: M summarized with visualization?",
+                               "q2_2_missingness_summarized" ~ "Q2.2: How is M summarized?",
+                               "q3_report_dealing_with_missingness" ~ "Q3: Authors report how they dealt with M?",
+                               "q3_1_method_dealing_with_missingness" ~ "Q3.1: Method to deal with M?",
+                               "q3_2_method_justification" ~ "Q3.2: Justification for method?",
+                               "q3_3_type_justification" ~ "Q3.3: Type of justification?",
+                               "q4_code_available" ~ "Q4: Code for sim available?",
+                               .default = Question)) |> 
+  mutate(Question = factor(Question, levels = Question)) |> 
+  mutate(Question = forcats::fct_rev(Question)) |> 
+  mutate(ag_pct = paste0(round(Agreement,3) * 100, "%"),
+         ag_ci_l_pct = paste0(round(ci_l,3) * 100, "%"),
+         ag_ci_h_pct = paste0(round(ci_h,3) * 100, "%")) |> 
+  mutate(ag_label = paste0(ag_pct, "\n",
+                           "[", ag_ci_l_pct, ", ",
+                           ag_ci_h_pct, "]")) |> 
   ggplot(aes(x = Agreement, y = Question))+
     ## geom_bar(stat = "identity", alpha = 0.8, fill = "#08519c") +
-    geom_segment(aes(xend = 0, yend = Question), alpha = 0.5, size = 0.2) +
-    geom_point(size = 0.5) +
-    scale_fill_gradient(high = "darkblue", low = "red") +
-    scale_x_continuous(limits = c(0, 1), expand = c(0.01, 0.01), labels = scales::percent) +
-    theme(panel.grid.minor = element_blank(),
-          panel.grid.major.y = element_blank(),
-          axis.text.y = element_text(size = rel(0.4)),
-          axis.text.x = element_text(size = rel(0.5)),
-          axis.title = element_text(size = rel(0.55)))
+  geom_segment(aes(xend = 0, yend = Question), alpha = 0.5, size = 0.5) +
+  geom_point(size = 2.6) +
+  # add label with percentage at the end of geom_segment
+  geom_text(aes(label = ag_label),
+            hjust = 0,
+            nudge_x = 0.01,
+            size = 4.3)+
+  scale_fill_gradient(high = "darkblue", low = "red") +
+  scale_y_discrete(labels = scales::label_wrap(16))+
+  scale_x_continuous(limits = c(0, 1.24), expand = c(0.0, 0), labels = scales::percent,
+                     breaks = c(0,.25,.5,.75,1)) +
+  theme_bs()+
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(),
+          axis.text.y = element_text(size = rel(0.75)),
+          axis.text.x = element_text(size = rel(0.85)),
+          axis.title = element_text(size = rel(0.65)))+
+  labs(y = "")
 
-ggsave("agreement_plot.pdf", agreement_plot, path = here("figures/"),
-       device = "pdf", height = 3, width = 4)
+
+agreement_plot
+
+ggsave("agreement_plot.pdf", agreement_plot, path = here("literature-review/figures/"),
+       device = "pdf", height = 10.5, width = 8)
 
 ```
 
-
-Descriptive summary:
-```{r}
-agreement_matrix %>% 
-  as.data.frame() %>% 
-  # filter studies where we reviewed different sims for now (so whichsim == TRUE/1)
-  filter(whichsim == 1) %>% 
-  apply(., 2, mean) %>% 
-  as.data.frame() %>% 
-  tibble::rownames_to_column(var = "Question") %>% 
-  rename("Agreement" = ".") %>% 
-  filter(!Question %in% c("whichsim", "doi", "reviewer", 
-                          "pmother_q15", "coding_confidence", "coding_type")) %>% 
-  mutate(Question = factor(Question, levels = Question)) %>%
-  mutate(Question = forcats::fct_rev(Question)) %>% 
-  summary()
-```
 
 
 

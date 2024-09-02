@@ -40,6 +40,9 @@ all_res <- all_res |>
   filter(!grepl("*p", id)) |> 
   filter(q6_comments != "pilot" | is.na(q6_comments))
 
+# Filter erroneous duplicate (sim study was not in that issue)
+all_res <- subset(all_res, !c(doi == "https://doi.org/10.1037/met0000420" & reviewer == "SP"))
+
 
 # Fix data structure -----------------------------------------------------
 # Remove columns not used in the analyses
