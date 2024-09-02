@@ -51,3 +51,9 @@ rsconnect/
 # large data set from Carter et al. (2019)
 res.wide.red.RData
 missSim.Rproj
+
+# raw data files
+lit_review_data_AL.xlsx
+lit_review_data_BS.xlsx
+lit_review_data_SP.xlsx
+lit_review_data_FB.xlsx
