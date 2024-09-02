@@ -7,7 +7,6 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(ggbeeswarm)
-library(broom)
 library(cowplot)
 ## setwd("case-studies/Carter2019")
 load("carter2019.rda")
@@ -118,29 +117,22 @@ ggplot(data = carter2019summarieslong,
         legend.position = "bottom")
 ggsave("fig-carter-handling-missingness.pdf", width = 8, height = 5, scale = 0.9)
 
-
-## understand occurrence of missingness
+## visualize missingness
+methodlevels <- c("RE", "WAAP-WLS", "PET-PEESE", "TF", "3PSM", "p-curve",
+                  "p-uniform")
 carter2019$missingcase <- is.na(carter2019$b0_estimate)
-carter2019individual <- carter2019 |>
-    select(method, k, delta, tau, qrpEnv, censor, missingcase) |>
-    ## recode as non-ordered factor to use treatment contrasts in regressions
-    mutate(qrpEnv = factor(qrpEnv, levels = c("none", "med", "high"),
-                           ordered = FALSE),
-           censor = factor(censor, levels = c("none", "med", "high"),
-                           ordered = FALSE))
-carter2019summary <- carter2019 |>
+carter2019summaries <- carter2019 |>
+    mutate(k = factor(k),
+           delta = factor(delta),
+           tau = factor(tau),
+           method = factor(method, levels = methodlevels)) |>
     group_by(method, k, delta, tau, qrpEnv, censor) |>
-    summarise(prop_missing = mean(missingcase)) |>
+    summarise(missing = mean(missingcase)) |>
     ungroup()
 
-
-## visualize missingness
-plotA <- carter2019summary |>
-    mutate(condition = paste(k, delta, tau, qrpEnv, censor),
-           method = factor(method, levels = c("RE", "WAAP-WLS", "PET-PEESE",
-                                              "TF", "3PSM", "p-curve",
-                                              "p-uniform"))) |>
-    ggplot(aes(x = method, y = prop_missing)) +
+plotA <- carter2019summaries |>
+    mutate(condition = paste(k, delta, tau, qrpEnv, censor)) |>
+    ggplot(aes(x = method, y = missing)) +
     geom_line(aes(group = condition), alpha = 0.1) +
     geom_quasirandom(alpha = 0.2) +
     scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
@@ -149,14 +141,6 @@ plotA <- carter2019summary |>
     theme(panel.grid.minor = element_blank(),
           panel.grid.major = element_line(linetype = "dashed"))
 
-## create a marginal missingness plot ( HACKY)
-carter2019summaries <- carter2019 |>
-    mutate(k = factor(k),
-           delta = factor(delta),
-           tau = factor(tau)) |>
-    group_by(method, k, delta, tau, qrpEnv, censor) |>
-    summarise(missing = mean(missingcase)) |>
-    ungroup()
 ## marginal summaries per variable
 vars <- c("tau", "k", "delta", "qrpEnv", "censor")
 varmiss <- do.call("rbind", lapply(X = vars, FUN = function(var) {
@@ -217,7 +201,7 @@ subplots <- lapply(X = c("Overall", vars), FUN = function(var) {
 subplots[[5]] <- subplots[[5]] + labs(y = "")
 subplots[[6]] <- subplots[[6]] + labs(y = "")
 plotC1 <- plot_grid(plotlist = subplots, ncol = 2, rel_heights = c(1, 1.25, 1))
-plotC <- ggdraw(add_sub(plotC1, bquote("Condition-wise non-convergence rate (diamond = mean)"),
+plotC <- ggdraw(add_sub(plotC1, bquote("Condition-wise non-convergence rate"),
                         vpadding = grid::unit(0, "lines"), y = 5, x = 0.5,
                         vjust = 4.5, size = 12))
 plot_grid(plotA, plotC, ncol = 1, rel_heights = c(1, 4), labels = c("A", "B"))
