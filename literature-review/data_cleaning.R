@@ -43,6 +43,8 @@ all_res <- all_res |>
 # Filter erroneous duplicate (sim study was not in that issue)
 all_res <- subset(all_res, !c(doi == "https://doi.org/10.1037/met0000420" & reviewer == "SP"))
 
+# Filter out duplicates (one reviewer accidentally coded the wrong issue)
+all_res <- subset(all_res, !c(journal == "PM" & reviewer == "AL" & year == "2021" & issue == "5"))
 
 # Fix data structure -----------------------------------------------------
 # Remove columns not used in the analyses
