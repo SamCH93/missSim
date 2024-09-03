@@ -44,7 +44,6 @@ library(ggpubr)
 data_lr <- readxl::read_xlsx(here("data/sim_res.xlsx"))
 
 # Remove entries for coding interrater agreement
-# TODO
 data_lr <- data_lr |> 
   filter(id != "agreement" | is.na(id))
 ```
@@ -454,7 +453,7 @@ If authors report how they dealt with missingness, what method did they use?
 q31_plot_max <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
   filter(q2_mentions_missingness == "yes") |> 
-  filter(q3_report_dealing_with_missingness == "yes") |> 
+  # filter(q3_report_dealing_with_missingness == "yes") |> 
   group_by(q3_1_method_dealing_with_missingness) |>
   count() |> 
   pull(n) |> 
@@ -463,10 +462,10 @@ q31_plot_max <- data_lr |>
 q3_1_plot <- data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   filter(q2_mentions_missingness == "yes") |>
-  filter(q3_report_dealing_with_missingness == "yes") |>
-  # change NA to "outcome"
+  filter(q3_report_dealing_with_missingness == "yes" | q3_report_dealing_with_missingness == "unclear") |>
+  # change NA to "other" -> was missingness as outcome
   mutate(q3_1_method_dealing_with_missingness = if_else(is.na(q3_1_method_dealing_with_missingness), 
-                                                        "outcome", 
+                                                        "other", 
                                                         q3_1_method_dealing_with_missingness)) |>
   mutate(q3_1_method_dealing_with_missingness = case_match(q3_1_method_dealing_with_missingness,
                                                            "additional simulations" ~ "add sims",
@@ -522,7 +521,7 @@ If authors provide a justification for their choice of handling missingness, wha
 q33_plot_max <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
   filter(q2_mentions_missingness == "yes") |> 
-  filter(q3_report_dealing_with_missingness == "yes") |> 
+  filter(q3_report_dealing_with_missingness == "yes" | q3_report_dealing_with_missingness == "unclear") |> 
   group_by(q3_3_type_justification) |>
   count() |> 
   pull(n) |> 
@@ -531,7 +530,7 @@ q33_plot_max <- data_lr |>
 q3_3_plot <- data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   filter(q2_mentions_missingness == "yes") |>
-  filter(q3_report_dealing_with_missingness == "yes") |>
+  filter(q3_report_dealing_with_missingness == "yes" | q3_report_dealing_with_missingness == "unclear") |>
   filter(q3_2_method_justification == "yes") |>
   ggplot(aes(x = q3_3_type_justification, fill = journal, group = journal))+
     geom_bar(col = 1)+
@@ -676,11 +675,11 @@ q3_plot_nonmention_pub <- data_lr |>
 q3_1_plot_counts <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
   filter(q2_mentions_missingness == "yes") |> 
-  filter(q3_report_dealing_with_missingness == "yes") |> 
+  filter(q3_report_dealing_with_missingness == "yes" | q3_report_dealing_with_missingness == "unclear") |> 
     mutate(
     q3_1_method_dealing_with_missingness = if_else(
       is.na(q3_1_method_dealing_with_missingness),
-      "outcome",
+      "other",
       q3_1_method_dealing_with_missingness
     )
   ) |>
@@ -694,8 +693,6 @@ q3_1_plot_counts <- data_lr |>
       .default = q3_1_method_dealing_with_missingness
     )
   ) |>
-  # don't plot outcome
-  filter(q3_1_method_dealing_with_missingness != "outcome") |>
   count(q3_1_method_dealing_with_missingness) |>
   mutate(prop = n/sum(n))
 
@@ -703,12 +700,12 @@ q31_plot_max_pub <- q31_plot_max * 1.05
 q3_1_plot_pub <- data_lr |>
   filter(q1_is_sim_study == "yes") |>
   filter(q2_mentions_missingness == "yes") |>
-  filter(q3_report_dealing_with_missingness == "yes") |>
+  filter(q3_report_dealing_with_missingness == "yes" | q3_report_dealing_with_missingness == "unclear") |>
   # change NA to "outcome"
   mutate(
     q3_1_method_dealing_with_missingness = if_else(
       is.na(q3_1_method_dealing_with_missingness),
-      "outcome",
+      "other",
       q3_1_method_dealing_with_missingness
     )
   ) |>
@@ -721,8 +718,7 @@ q3_1_plot_pub <- data_lr |>
       "list-wise deletion" ~ "list- wise",
       .default = q3_1_method_dealing_with_missingness
     )
-  ) |>
-  filter(q3_1_method_dealing_with_missingness != "outcome") |> 
+  ) |> 
   # order q3_1 by frequency
   mutate(q3_1_method_dealing_with_missingness = fct_infreq(q3_1_method_dealing_with_missingness)) |>
   ggplot(aes(x = q3_1_method_dealing_with_missingness, fill = journal, group = journal)) +
