@@ -46,6 +46,10 @@ data_lr <- readxl::read_xlsx(here("data/sim_res.xlsx"))
 # Remove entries for coding interrater agreement
 data_lr <- data_lr |> 
   filter(id != "agreement" | is.na(id))
+
+# change "other deletion" to "other" for clarity
+data_lr <- data_lr |> 
+  mutate(q3_1_method_dealing_with_missingness = ifelse(q3_1_method_dealing_with_missingness == "other deletion", "other", q3_1_method_dealing_with_missingness))
 ```
 
 
@@ -780,8 +784,8 @@ Combine plots for Q2 (Mention of Missingness per Journal), Q3 (Handling of Missi
 ```{r}
 # create a shared legend
 leg_plot <- q2_plot +
-  theme(legend.text = element_text(size = 16),
-        legend.title = element_text(size = 16))
+  theme(legend.text = element_text(size = 17),
+        legend.title = element_text(size = 17))
 
 legend <- cowplot::get_plot_component(leg_plot, 'guide-box-top', return_all = TRUE)
 
