@@ -7,13 +7,11 @@ in Simulation Studies
 
 ## Reproducing our results
 
-To reproduce the case studies, refer to the files in `/case-studies/`
+To reproduce the case study, refer to the files in `case-study/`
 
-* `/case-studies/Carter2019/`: contains R scripts to reproduce case study from
-  Carter et al. (2019)
-* TODO: add other case studies
+* TODO: add file overview
   
   
-To reproduce the literature review analyses, refer to the files in `literature-review`
+To reproduce the literature review analyses, refer to the files in `literature-review/`
 
 * TODO: add file overview

@@ -8,7 +8,7 @@ library(ggplot2)
 ## load intermediate data "res.wide.red.RData" from Carter et al. (2019), data
 ## is too big too big for GitHub, run R script "3-resultsFramework.R" from
 ## https://github.com/nicebread/meta-showdown to produce it
-## setwd("case-studies/Carter2019/")
+## setwd("case-study/")
 load("res.wide.red.RData")
 str(res.wide.red)
 
@@ -85,7 +85,6 @@ save(object = carter2019, file = "carter2019.rda")
 
 
 ## reproduce some figures from paper
-library(ggplot2)
 fig3 <- function(data, pubbias = "none") {
     fig3dat <- data |>
         filter(delta %in% c(0, 0.5)) |>
