@@ -205,7 +205,7 @@ q2_plot <- data_lr |>
   filter(q1_is_sim_study == "yes") |>
   ggplot(aes(x = q2_mentions_missingness, fill = journal, group = journal))+
     geom_bar(col = 1)+
-    labs(x = "Mentions missingness", y = "Number of studies", fill = "Journal")+
+    labs(x = "Mentions missingness", y = "Number of studies", fill = "Journal:")+
     scale_fill_manual(values = cols)+
     theme(panel.grid.major.x = element_blank())+
     scale_y_continuous(limits = c(0, q2_plot_max), expand = c(0,0))
@@ -610,25 +610,25 @@ q4_plot_prop
 First, slightly tweak the plots for the combined figure:
 ```{r}
 # obtain counts for plotting
-q2_plot_counts <- data_lr |> 
-  filter(q1_is_sim_study == "yes") |> 
+q2_plot_counts <- data_lr |>
+  filter(q1_is_sim_study == "yes") |>
   count(q2_mentions_missingness) |>
   mutate(prop = n/sum(n))
 
 
 q2_plot_max_pub <- q2_plot_max * 1.05
-q2_plot_pub <- data_lr |> 
+q2_plot_pub <- data_lr |>
   filter(q1_is_sim_study == "yes") |>
   ggplot(aes(x = q2_mentions_missingness, fill = journal, group = journal))+
     geom_bar(col = 1)+
-    labs(x = "Mentions missingness", y = "Number of studies", fill = "Journal")+
+    labs(x = "Mentions missingness", y = "Number of studies", fill = "Journal:")+
     scale_fill_manual(values = cols)+
     theme(panel.grid.major.x = element_blank())+
     scale_y_continuous(limits = c(0, q2_plot_max_pub), expand = c(0, 0.2))+
-    geom_text(data = q2_plot_counts, 
+    geom_text(data = q2_plot_counts,
               aes(x = q2_mentions_missingness,
                   y = n,
-                  label = n), 
+                  label = n),
               vjust = -0.5,
               size = 5.8,
               inherit.aes = FALSE)+
@@ -640,6 +640,45 @@ q2_plot_pub <- data_lr |>
                             labs(x = NULL,
                                  y = NULL,
                                  title = "Missingness mentioned?")
+
+q1_plot_max <- data_lr |> 
+  count(journal) |> 
+  pull(n) |> 
+  max() * 1.1
+
+# get some counts
+q1_plot_counts <- data_lr |> 
+  count(journal, q1_is_sim_study) |> 
+  filter(q1_is_sim_study == "yes") |> 
+  group_by(journal) |> 
+  mutate(prop = n/sum(n))
+
+q1_plot_pub <- data_lr |> 
+  filter(q1_is_sim_study != "unclear") |> 
+  ggplot(aes(x = journal, fill = journal, alpha = q1_is_sim_study)) +
+    geom_bar(col = 1) +
+    labs(x = NULL, 
+         title ="Number of simulation studies per journal", 
+         fill = "Journal") +
+    # add raw numbers
+    geom_text(data = q1_plot_counts, 
+              aes(x = journal, y = n, label = n, group = q1_is_sim_study), 
+              size = 5.8, inherit.aes = FALSE, position = position_stack(vjust = 0.5)) + 
+                             theme(legend.position = "none",
+                                  text = element_text(size = 18),
+                                  axis.text.x = element_text(size = 18),
+                                  axis.text.y = element_text(size = 18),
+                                  axis.title.y = element_text(size = 16))+
+    # scale_fill_discrete_qualitative(palette = pal) + 
+    scale_fill_manual(values = cols) +
+    scale_alpha_manual(values = c(0.25, 1), guide = "none") +
+    scale_y_continuous(limits = c(0, q1_plot_max), expand = c(0,0))+
+    theme(panel.grid.major.x = element_blank(),
+          legend.position = "none",
+          text = element_text(size = 18))+
+    labs(y = NULL)
+
+
 
 
 q3_nonmention_plot_max_pub <- q3_nonmention_plot_max * 1.1
@@ -655,7 +694,7 @@ q3_plot_nonmention_pub <- data_lr |>
                                                                 "yes"))) |>  
   ggplot(aes(x = q3_report_dealing_with_missingness, fill = journal, group = journal))+
     geom_bar(col = 1)+
-    labs(x = "Indicated how missingness was handled", y = "Number of Studies", fill = "Journal")+
+    labs(x = "Indicated how missingness was handled", y = "Number of Studies", fill = "Journal:")+
     scale_fill_manual(values = cols)+
     scale_y_continuous(limits = c(0, q3_nonmention_plot_max_pub), expand = c(0, 0.2))+
     # add raw numbers
@@ -734,7 +773,7 @@ q3_1_plot_pub <- data_lr |>
             vjust = -0.5, 
             size = 5.8, 
             inherit.aes = FALSE) +
-  labs(x = "Method of handling missingness", y = "Number of studies", fill = "Journal") +
+  labs(x = "Method of handling missingness", y = "Number of studies", fill = "Journal:") +
   scale_x_discrete(labels = scales::label_wrap(4)) +
   scale_fill_manual(values = cols) +
   scale_y_continuous(limits = c(0, q31_plot_max_pub), expand = c(0, 0.2)) +
@@ -757,7 +796,7 @@ q4_plot_prop_pub <- data_lr |>
    scale_alpha_manual(values = c(0.25, 1), guide = "none") +
   scale_y_continuous(labels = scales::percent_format(),
                      limits = c(0,1), expand = c(0,0)) +
-    labs(x = "Journal", y = "Proportion of Studies with Code", fill = "Journal")+
+    labs(x = "Journal", y = "Proportion of Studies with Code", fill = "Journal:")+
     scale_fill_manual(values = cols) +
    geom_text(data = q4_counts, 
              aes(x = journal,
@@ -785,7 +824,9 @@ Combine plots for Q2 (Mention of Missingness per Journal), Q3 (Handling of Missi
 # create a shared legend
 leg_plot <- q2_plot +
   theme(legend.text = element_text(size = 17),
-        legend.title = element_text(size = 17))
+        legend.title = element_text(size = 17),
+        legend.spacing.x = unit(4, 'in'),
+        legend.key.spacing.x = unit(0.25, 'in'))
 
 legend <- cowplot::get_plot_component(leg_plot, 'guide-box-top', return_all = TRUE)
 
@@ -793,7 +834,7 @@ legend <- cowplot::get_plot_component(leg_plot, 'guide-box-top', return_all = TR
 
 # combine plots
 # only use one legend for all plots
-p_c <- cowplot::plot_grid(q2_plot_pub, 
+p_c <- cowplot::plot_grid(q1_plot_pub, 
                           q3_plot_nonmention_pub, 
                            q3_1_plot_pub,
                            q4_plot_prop_pub,
