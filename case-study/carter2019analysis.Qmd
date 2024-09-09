@@ -125,9 +125,9 @@ plotC1 <- plot_grid(plotlist = subplots, ncol = 2, rel_heights = c(1, 1.25, 1))
 plotC <- ggdraw(add_sub(plotC1, bquote("Condition-wise non-convergence rate"),
                         vpadding = grid::unit(0, "lines"), y = 5, x = 0.5,
                         vjust = 4.5, size = 12))
-plot_grid(plotA, plotC, ncol = 1, rel_heights = c(1, 4), labels = c("A", "B"))
+plot_grid(plotA, plotC, ncol = 1, rel_heights = c(1, 4.5), labels = c("A", "B"))
 ## ggsave(filename = "fig-carter-exploring-missingness.pdf", width = 8.5,
-##        height = 10.5, scale = 1.025)
+##        height = 10, scale = 1.025)
 ```
 
 
