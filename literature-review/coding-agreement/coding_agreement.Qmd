@@ -1,5 +1,5 @@
 ---
-title: "Handling Missingness and Non-Convergence in Simulation Studies"
+title: "Handling Missingness, Failures, and Non-Convergence in Simulation Studies"
 subtitle: "Coding Agreement of Raters"
 author: 
  - Samuel Pawel
@@ -87,15 +87,13 @@ for(j in 1:ncol(agreement_matrix)){
 }
 
 
-print(disagreements)
+# print(disagreements)
 
 ```
 
 
 
 Figure for the paper:
-
-TODO fix this one NA
 ```{r fig.align = "center", fig.height = 8, fig.width = 5*1.5}
 
 # add google font
@@ -223,7 +221,7 @@ agreement_plot <- agreement_matrix |>
 agreement_plot
 
 ggsave("agreement_plot.pdf", agreement_plot, path = here("literature-review/figures/"),
-       device = "pdf", height = 10.5, width = 8)
+       device = "pdf", height = 9.5, width = 8)
 
 ```
 

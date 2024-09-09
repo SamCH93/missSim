@@ -1,5 +1,5 @@
 ---
-title: "Handling Missingness and Non-Convergence in Simulation Studies"
+title: "Handling Missingness, Failures, and Non-Convergence in Simulation Studies"
 subtitle: "Randomizing papers for agreement assessment"
 author: 
  - Samuel Pawel
