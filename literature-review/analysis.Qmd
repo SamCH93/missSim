@@ -33,12 +33,12 @@ Load all relevant packages and the data:
 ```{r}
 set.seed(2024)
 library(tidyverse)
-library(here)
 library(sysfonts)
 library(readxl)
 library(cowplot)
 library(scales)
 library(ggpubr)
+libary(here)
 
 # Load data
 data_lr <- readxl::read_xlsx(here("data/sim_res.xlsx"))
@@ -858,7 +858,7 @@ p_c_leg
 
 Save plots:
 ```{r, eval = FALSE}
-ggsave("literature-review/figures/fig_lit_review_results.pdf", p_c_leg, width = 15*0.76, height = 10*0.76)
+ggsave(here("literature-review/figures/fig_lit_review_results.pdf"), p_c_leg, width = 15*0.76, height = 10*0.76)
 ```
 
  

@@ -32,12 +32,13 @@ Load the data and the tidyverse packages:
 set.seed(2024)
 library(tidyverse)
 library(readxl)
+library(here)
 
 # Load the data
-data_fb <- read_xlsx("data/lit_review_data_FB.xlsx")
-data_sp <- read_xlsx("data/lit_review_data_SP.xlsx")
-data_al <- read_xlsx("data/lit_review_data_AL.xlsx")
-data_bs <- read_xlsx("data/lit_review_data_BS.xlsx")
+data_fb <- read_xlsx(here("data/lit_review_data_FB.xlsx"))
+data_sp <- read_xlsx(here("data/lit_review_data_SP.xlsx"))
+data_al <- read_xlsx(here("data/lit_review_data_AL.xlsx"))
+data_bs <- read_xlsx(here("data/lit_review_data_BS.xlsx"))
 
 ```
 
@@ -153,15 +154,15 @@ while(isFALSE(nc_check)){
     sample(setdiff(coders, x), 1)
   })
   
-  nc_check <- all(final_sample %>%
-                    count(new_coder) %>%
+  nc_check <- all(final_sample |>
+                    count(new_coder) |>
                     pull(n) %in% c(12, 13))
 }
 ```
 
 Check the number of papers from each reviewer:
 ```{r}
-final_sample %>%
+final_sample |>
   count(reviewer)
 ```
 
@@ -177,7 +178,7 @@ Create a list of DOIs for each individual coder and save to disk:
 final_sample |> 
   select(new_coder, doi, journal, issue) |> 
   arrange(new_coder) |> 
-  write_csv2("literature-review/coding-agreement/agreement_dois_per_coder.csv")
+  write_csv2(here("literature-review/coding-agreement/agreement_dois_per_coder.csv"))
 ```
 
 
@@ -217,7 +218,7 @@ dois_per_coder_clean |>
 
 # save to disk
 dois_per_coder_clean |> 
-  write_csv2("literature-review/coding-agreement/agreement_dois_per_coder_new.csv")
+  write_csv2(here("literature-review/coding-agreement/agreement_dois_per_coder_new.csv"))
 
 ```
 

@@ -1,5 +1,4 @@
 # Packages ----------------------------------------------------------------
-library(here)         # reproducible file handling
 library(lubridate)    # dealing with dates
 library(readxl)       # excel files
 # library(validate)     # validate dataset
@@ -8,10 +7,10 @@ library(writexl)
 library(tidyverse)    # data manipulation
 
 # Load Data ---------------------------------------------------------------
-dat_fb <- readxl::read_excel(here::here("data/lit_review_data_FB.xlsx"))
-dat_bs <- readxl::read_excel(here::here("data/lit_review_data_BS.xlsx"))
-dat_sp <- readxl::read_excel(here::here("data/lit_review_data_SP.xlsx"))
-dat_al <- readxl::read_excel(here::here("data/lit_review_data_AL.xlsx"))
+dat_fb <- readxl::read_excel(here("data/lit_review_data_FB.xlsx"))
+dat_bs <- readxl::read_excel(here("data/lit_review_data_BS.xlsx"))
+dat_sp <- readxl::read_excel(here("data/lit_review_data_SP.xlsx"))
+dat_al <- readxl::read_excel(here("data/lit_review_data_AL.xlsx"))
 
 # Merge Data --------------------------------------------------------------
 # Check compatibility
@@ -162,8 +161,8 @@ sim_res <- sim_res |>
 
 
 # Save data
-writexl::write_xlsx(sim_res, path = here::here("data/sim_res.xlsx"))
-saveRDS(sim_res, file = here::here("data/sim_res.RDS"))
+writexl::write_xlsx(sim_res, path = here("data/sim_res.xlsx"))
+saveRDS(sim_res, file = here("data/sim_res.RDS"))
 
 # LEGACY CODE
 # # Alternative: delete strings from some columns, convert these to numeric

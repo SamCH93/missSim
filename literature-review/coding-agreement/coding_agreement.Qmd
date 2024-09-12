@@ -35,7 +35,7 @@ library(here)
 sim_res <- readRDS(file = here("data/sim_res.RDS"))
 
 # Some cleaning
-sim_res_clean <- sim_res %>% 
+sim_res_clean <- sim_res |>  
   # ignore irrelevant cols
   select(!c(year, issue, journal, q2_1d_missingnenss_sumarized_other, 
             contains("comment"), q5_is_example, q7_coding_confidence)) |> 
