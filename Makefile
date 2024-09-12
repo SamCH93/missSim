@@ -5,13 +5,13 @@ FILE=miss-sim
 ## build docker image (requires root rights for docker)
 dbuild: Dockerfile
 	docker build \
-    -t $(FILE) .
+	-t $(FILE) .
 
 ## run docker container
 docker: dbuild
 	echo "open RStudio Server at http://localhost:8787"
 	docker run \
-    --rm \
+	--rm \
 	-ti \
 	-e DISABLE_AUTH=true \
 	-e ROOT=true \
