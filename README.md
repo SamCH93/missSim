@@ -54,8 +54,8 @@ To reproduce the literature review analyses, refer to the files in
 * `literature-review/coding-agreement` quarto files for agreement randomization
   and analysis
   
-To reproduce the simulation example via a Docker container that encapsulates the
-used computational environment, refer to the files:
+To reproduce our analyses using a Docker container that encapsulates the
+computational environment used, refer to the files
 
 * `Dockerfile` Dockerfile to recreate the computational environment used in the
   simulation study
