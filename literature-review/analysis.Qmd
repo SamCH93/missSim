@@ -38,7 +38,8 @@ library(readxl)
 library(cowplot)
 library(scales)
 library(ggpubr)
-libary(here)
+
+library(here)
 
 # Load data
 data_lr <- readxl::read_xlsx(here("data/sim_res.xlsx"))

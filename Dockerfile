@@ -4,6 +4,7 @@ FROM rocker/verse:4.4.1
 ## set up directories
 WORKDIR home/rstudio
 RUN mkdir /home/rstudio/case-study /home/rstudio/data /home/rstudio/literature-review
+COPY missSim.Rproj /home/rstudio/
 
 ## install R packages from CRAN the last day of the specified R version
 RUN install2.r --error --skipinstalled --ncpus -4 \
