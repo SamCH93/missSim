@@ -22,7 +22,8 @@ A BibTeX entry is given by
 To reproduce the case study, refer to the files in `case-study/`
 
 * `case-study/carter2019-data-cleaning.R` R script to clean the
-  `res.wide.red.RData` data from Carter et al. (2019) and create
+  `res.wide.red.RData` data from Carter et al. (2019,
+  <https://doi.org/10.1177/2515245919847196>) and create
   `case-study/carter2019.rda`. The file `res.wide.red.RData` is too large for a
   GitHub repository. If you want to reproduce this step, clone
   <https://github.com/nicebread/meta-showdown> and run the R script
@@ -52,5 +53,17 @@ To reproduce the literature review analyses, refer to the files in
 * `literature-review/figures` figure outputs used in the paper
 * `literature-review/coding-agreement` quarto files for agreement randomization
   and analysis
+  
+To reproduce the simulation example via a Docker container that encapsulates the
+used computational environment, refer to the files:
+
+* `Dockerfile` Dockerfile to recreate the computational environment used in the
+  simulation study
+* `Makefile` Makefile to conveniently build and run the Docker analysis: Make
+  sure to have Docker and Make installed, then run `make docker` from the root
+  directory of this git repository. This will install all necessary
+  dependencies. RStudio Server can then be opened from a browser
+  (<http://localhost:8787>), and the R and quarto files in `case-study/` and
+  `literature-review/` can be rerun
 
 
