@@ -4,12 +4,13 @@
 ## packages
 library(dplyr)
 library(ggplot2)
+library(here)
 
 ## load intermediate data "res.wide.red.RData" from Carter et al. (2019), data
 ## is too big too big for GitHub, run R script "3-resultsFramework.R" from
 ## https://github.com/nicebread/meta-showdown to produce it
 ## setwd("case-study/")
-load("res.wide.red.RData")
+load(here("case-study/res.wide.red.RData"))
 str(res.wide.red)
 
 ## need to merge "H0.reject.pos" colum of the "pcurve.evidence" method with the
@@ -81,7 +82,7 @@ datClean |>
 
 ## save data
 carter2019 <- datClean
-save(object = carter2019, file = "carter2019.rda")
+save(object = carter2019, file = here("case-study/carter2019.rda"))
 
 
 ## reproduce some figures from paper

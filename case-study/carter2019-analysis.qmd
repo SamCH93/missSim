@@ -33,7 +33,8 @@ library(tidyr)
 library(ggplot2)
 library(ggbeeswarm)
 library(cowplot)
-load("carter2019.rda")
+library(here)
+load(here("case-study/carter2019.rda"))
 ```
 
 # Visualize missingness
@@ -126,8 +127,8 @@ plotC <- ggdraw(add_sub(plotC1, bquote("Condition-wise non-convergence rate"),
                         vpadding = grid::unit(0, "lines"), y = 5, x = 0.5,
                         vjust = 4.5, size = 12))
 plot_grid(plotA, plotC, ncol = 1, rel_heights = c(1, 4.5), labels = c("A", "B"))
-## ggsave(filename = "figures/fig-carter-exploring-missingness.pdf", width = 8.5,
-##        height = 10, scale = 1.025)
+## ggsave(filename = here("case-study/figures/fig-carter-exploring-missingness.pdf"), 
+##        width = 8.5, height = 10, scale = 1.025)
 ```
 
 
@@ -235,8 +236,8 @@ ggplot(data = carter2019summarieslong,
         panel.grid.major.y = element_blank(),
         legend.position = "bottom",
         legend.text = element_text(size = rel(1.025)))
-## ggsave("figures/fig-carter-handling-missingness.pdf", width = 8, height = 5,
-##        scale = 0.9)
+## ggsave(here("case-study/figures/fig-carter-handling-missingness.pdf"), 
+##        width = 8, height = 5, scale = 0.9)
 ```
 
 # Session Info

@@ -3,9 +3,9 @@ title: "Handling Missingness, Failures, and Non-Convergence in Simulation Studie
 subtitle: "Coding Agreement of Raters"
 author: 
  - Samuel Pawel
+ - František Bartoš
  - Björn S. Siepe
  - Anna Lohmann
- - František Bartoš
 date: "15 August 2024"
 format:
   html:
