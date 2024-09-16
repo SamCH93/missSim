@@ -3,10 +3,10 @@ title: "Handling Missingness, Failures, and Non-Convergence in Simulation Studie
 subtitle: "Literature Review Analysis"
 author: 
  - Samuel Pawel
- - František Bartoš
  - Björn S. Siepe
  - Anna Lohmann
-date: "13 September 2024"
+ - František Bartoš
+date: "20 August 2024"
 format:
   html:
     toc: true
@@ -34,13 +34,12 @@ Load all relevant packages and the data:
 set.seed(2024)
 library(tidyverse)
 library(sysfonts)
-library(showtext)
 library(readxl)
 library(cowplot)
 library(scales)
 library(ggpubr)
+
 library(here)
-library(pander)
 
 # Load data
 data_lr <- readxl::read_xlsx(here("data/sim_res.xlsx"))
@@ -786,7 +785,7 @@ q3_1_plot_pub <- data_lr |>
                                   axis.text.y = element_text(size = 18))+
                              labs(x = NULL,
                                   y = NULL,
-                                  title = "Method of handling missingness reported?")
+                                  title = "Method of handling missingness")
 
 
 
