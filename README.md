@@ -44,8 +44,12 @@ To reproduce the case study, refer to the files in `case-study/`
 To reproduce the literature review analyses, refer to the files in
 `literature-review/` and `data/`
 
-* `literature-review/data_cleaning.R` R script to clean and merge literature
-  review data from the four coders
+* `literature-review/data_cleaning.R` R script to clean and merge the literature
+  review data from the four coders. Note that the data from the four coders are
+  not provided in our repository due to them containing sensitive comments
+  intended solely for discussions among the coders. However, running this script
+  is not necessary to reproduce the rest of our analysis, as we also provide the
+  cleaned literature review data.
 * `data/` contains cleaned literature review data files in RDS and xlsx formats
   (required for analysis)
 * `literature-review/analysis.Qmd` quarto file containing R code for literature
