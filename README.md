@@ -27,7 +27,10 @@ To reproduce the case study, refer to the files in `case-study/`
   `case-study/carter2019.rda`. The file `res.wide.red.RData` is too large for a
   GitHub repository. If you want to reproduce this step, clone
   <https://github.com/nicebread/meta-showdown> and run the R script
-  `3-resultsFramework.R` to create `res.wide.red.RData`
+  `3-resultsFramework.R` to create `res.wide.red.RData` (Warning: This
+  repository is several GBs in size!). However, this step is not necessary for
+  reproducing the rest of our analysis as we also provide the cleaned summary
+  data
 * `case-study/carter2019.rda` cleaned summary data in rda format (required for
   analysis)
 * `case-study/carter2019-analysis.Qmd` quarto file containing R code for case
@@ -66,4 +69,9 @@ computational environment used, refer to the files
   (<http://localhost:8787>), and the R and quarto files in `case-study/` and
   `literature-review/` can be rerun
 
+Note that the Docker analysis only recreates the environment for running our
+analyses, not the environment for running the `3-resultsFramework.R` script from
+Carter et al. (2019). Refer to their GitHub repository
+(<https://github.com/nicebread/meta-showdown>) for details on their
+computational environment.
 
