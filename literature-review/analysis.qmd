@@ -6,7 +6,7 @@ author:
  - Björn S. Siepe
  - Anna Lohmann
  - František Bartoš
-date: "20 August 2024"
+date: "19 September 2024"
 format:
   html:
     toc: true
@@ -610,43 +610,6 @@ q4_plot_prop
 ## Tweak existing plots
 First, slightly tweak the plots for the combined figure:
 ```{r}
-# obtain counts for plotting
-# q2_plot_counts <- data_lr |>
-#   filter(q1_is_sim_study == "yes") |>
-#   count(q2_mentions_missingness) |>
-#   mutate(prop = n/sum(n))
-# 
-# 
-# q2_plot_max_pub <- q2_plot_max * 1.05
-# q2_plot_pub <- data_lr |>
-#   filter(q1_is_sim_study == "yes") |>
-#   ggplot(aes(x = q2_mentions_missingness, fill = journal, group = journal))+
-#     geom_bar(col = 1)+
-#     labs(x = "Mentions missingness", y = "Number of studies", fill = "Journal:")+
-#     scale_fill_manual(values = cols)+
-#     theme(panel.grid.major.x = element_blank())+
-#     scale_y_continuous(limits = c(0, q2_plot_max_pub), expand = c(0, 0.2))+
-#     geom_text(data = q2_plot_counts,
-#               aes(x = q2_mentions_missingness,
-#                   y = n,
-#                   label = n),
-#               vjust = -0.5,
-#               size = 5.8,
-#               inherit.aes = FALSE)+
-#    theme(legend.position = "none",
-#                                   text = element_text(size = 18),
-#                                   axis.text.x = element_text(size = 18),
-#          axis.text.y = element_text(size = 18),
-#                                   axis.title.y = element_text(size = 16))+
-#                             labs(x = NULL,
-#                                  y = NULL,
-#                                  title = "Missingness mentioned?")
-# 
-# q1_plot_max <- data_lr |> 
-#   count(journal) |> 
-#   pull(n) |> 
-#   max() * 1.1
-
 # get some counts
 q1_plot_counts <- data_lr |> 
   count(journal, q1_is_sim_study) |> 
