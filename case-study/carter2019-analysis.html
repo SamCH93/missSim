@@ -3241,8 +3241,8 @@ vertical-align: -.125em;
 </div>
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="do">## ggsave(filename = here(&quot;case-study/figures/fig-carter-exploring-missingness.pdf&quot;), </span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="do">##        width = 8.5, height = 10, scale = 1.025)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="at">filename =</span> <span class="fu">here</span>(<span class="st">&quot;case-study/figures/fig-carter-exploring-missingness.pdf&quot;</span>),</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>       <span class="at">width =</span> <span class="fl">8.5</span>, <span class="at">height =</span> <span class="dv">10</span>, <span class="at">scale =</span> <span class="fl">1.025</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </section>
@@ -3362,8 +3362,8 @@ vertical-align: -.125em;
 </div>
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="do">## ggsave(here(&quot;case-study/figures/fig-carter-handling-missingness.pdf&quot;), </span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="do">##        width = 8, height = 5, scale = 0.9)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="fu">here</span>(<span class="st">&quot;case-study/figures/fig-carter-handling-missingness.pdf&quot;</span>),</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>       <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">5</span>, <span class="at">scale =</span> <span class="fl">0.9</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </section>
@@ -3375,7 +3375,7 @@ vertical-align: -.125em;
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">paste</span>(<span class="fu">Sys.time</span>(), <span class="fu">Sys.timezone</span>(), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>2024-09-13 08:03:26.485319 Europe/Zurich </code></pre>
+<pre><code>2024-09-20 13:22:14.757531 Europe/Zurich </code></pre>
 </div>
 <details class="code-fold">
 <summary>Show the code</summary>
@@ -3384,7 +3384,7 @@ vertical-align: -.125em;
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.4.1 (2024-06-14)
 Platform: x86_64-pc-linux-gnu
-Running under: Ubuntu 22.04.4 LTS
+Running under: Ubuntu 22.04.5 LTS
 
 Matrix products: default
 BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.10.0 
@@ -3410,15 +3410,16 @@ other attached packages:
 
 loaded via a namespace (and not attached):
  [1] gtable_0.3.5      jsonlite_1.8.8    compiler_4.4.1    tidyselect_1.2.1 
- [5] scales_1.3.0      yaml_2.3.8        fastmap_1.2.0     R6_2.5.1         
- [9] labeling_0.4.3    generics_0.1.3    knitr_1.48        htmlwidgets_1.6.4
-[13] tibble_3.2.1      rprojroot_2.0.4   munsell_0.5.1     pillar_1.9.0     
-[17] rlang_1.1.4       utf8_1.2.4        xfun_0.46.8       cli_3.6.3        
-[21] withr_3.0.1       magrittr_2.0.3    digest_0.6.35     grid_4.4.1       
-[25] rstudioapi_0.16.0 beeswarm_0.4.0    lifecycle_1.0.4   vipor_0.4.7      
-[29] vctrs_0.6.5       evaluate_0.24.0   glue_1.7.0        farver_2.1.2     
-[33] fansi_1.0.6       colorspace_2.1-1  rmarkdown_2.27    purrr_1.0.2      
-[37] tools_4.4.1       pkgconfig_2.0.3   htmltools_0.5.8.1</code></pre>
+ [5] textshaping_0.4.0 systemfonts_1.1.0 scales_1.3.0      yaml_2.3.8       
+ [9] fastmap_1.2.0     R6_2.5.1          labeling_0.4.3    generics_0.1.3   
+[13] knitr_1.48        htmlwidgets_1.6.4 tibble_3.2.1      rprojroot_2.0.4  
+[17] munsell_0.5.1     pillar_1.9.0      rlang_1.1.4       utf8_1.2.4       
+[21] xfun_0.46.8       cli_3.6.3         withr_3.0.1       magrittr_2.0.3   
+[25] digest_0.6.35     grid_4.4.1        rstudioapi_0.16.0 beeswarm_0.4.0   
+[29] lifecycle_1.0.4   vipor_0.4.7       vctrs_0.6.5       evaluate_0.24.0  
+[33] glue_1.7.0        farver_2.1.2      ragg_1.3.2        fansi_1.0.6      
+[37] colorspace_2.1-1  rmarkdown_2.27    purrr_1.0.2       tools_4.4.1      
+[41] pkgconfig_2.0.3   htmltools_0.5.8.1</code></pre>
 </div>
 </div>
 <!-- -->
@@ -4016,8 +4017,8 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb10-131"><a href="#cb10-131" aria-hidden="true" tabindex="-1"></a>                        <span class="at">vpadding =</span> grid<span class="sc">::</span><span class="fu">unit</span>(<span class="dv">0</span>, <span class="st">&quot;lines&quot;</span>), <span class="at">y =</span> <span class="dv">5</span>, <span class="at">x =</span> <span class="fl">0.5</span>,</span>
 <span id="cb10-132"><a href="#cb10-132" aria-hidden="true" tabindex="-1"></a>                        <span class="at">vjust =</span> <span class="fl">4.5</span>, <span class="at">size =</span> <span class="dv">12</span>))</span>
 <span id="cb10-133"><a href="#cb10-133" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(plotA, plotC, <span class="at">ncol =</span> <span class="dv">1</span>, <span class="at">rel_heights =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">4.5</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>))</span>
-<span id="cb10-134"><a href="#cb10-134" aria-hidden="true" tabindex="-1"></a><span class="do">## ggsave(filename = here(&quot;case-study/figures/fig-carter-exploring-missingness.pdf&quot;), </span></span>
-<span id="cb10-135"><a href="#cb10-135" aria-hidden="true" tabindex="-1"></a><span class="do">##        width = 8.5, height = 10, scale = 1.025)</span></span>
+<span id="cb10-134"><a href="#cb10-134" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="at">filename =</span> <span class="fu">here</span>(<span class="st">&quot;case-study/figures/fig-carter-exploring-missingness.pdf&quot;</span>),</span>
+<span id="cb10-135"><a href="#cb10-135" aria-hidden="true" tabindex="-1"></a>       <span class="at">width =</span> <span class="fl">8.5</span>, <span class="at">height =</span> <span class="dv">10</span>, <span class="at">scale =</span> <span class="fl">1.025</span>)</span>
 <span id="cb10-136"><a href="#cb10-136" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb10-137"><a href="#cb10-137" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-138"><a href="#cb10-138" aria-hidden="true" tabindex="-1"></a></span>
@@ -4125,8 +4126,8 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb10-242"><a href="#cb10-242" aria-hidden="true" tabindex="-1"></a>        <span class="at">panel.grid.major.y =</span> <span class="fu">element_blank</span>(),</span>
 <span id="cb10-243"><a href="#cb10-243" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.position =</span> <span class="st">&quot;bottom&quot;</span>,</span>
 <span id="cb10-244"><a href="#cb10-244" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="fu">rel</span>(<span class="fl">1.025</span>)))</span>
-<span id="cb10-245"><a href="#cb10-245" aria-hidden="true" tabindex="-1"></a><span class="do">## ggsave(here(&quot;case-study/figures/fig-carter-handling-missingness.pdf&quot;), </span></span>
-<span id="cb10-246"><a href="#cb10-246" aria-hidden="true" tabindex="-1"></a><span class="do">##        width = 8, height = 5, scale = 0.9)</span></span>
+<span id="cb10-245"><a href="#cb10-245" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="fu">here</span>(<span class="st">&quot;case-study/figures/fig-carter-handling-missingness.pdf&quot;</span>),</span>
+<span id="cb10-246"><a href="#cb10-246" aria-hidden="true" tabindex="-1"></a>       <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">5</span>, <span class="at">scale =</span> <span class="fl">0.9</span>)</span>
 <span id="cb10-247"><a href="#cb10-247" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb10-248"><a href="#cb10-248" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-249"><a href="#cb10-249" aria-hidden="true" tabindex="-1"></a><span class="fu"># Session Info</span></span>
