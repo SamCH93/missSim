@@ -202,6 +202,12 @@ q2_plot_max <- data_lr |>
   count() |> 
   pull(n) * 1.1
 
+n_mentions <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  count(q2_mentions_missingness) |> 
+  filter(q2_mentions_missingness == "yes") |>
+  pull(n)
+
 q2_plot <- data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   ggplot(aes(x = q2_mentions_missingness, fill = journal, group = journal))+
@@ -354,6 +360,13 @@ q2_2_plot_max <- data_lr |>
   pull(n) |> 
   max() * 1.1
 
+n_quantified <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+  count(q2_2_missingness_summarized) |> 
+  filter(!q2_2_missingness_summarized == "not quantified") |>
+  pull(n) |> 
+  sum()
 
 q2_2_plot <- data_lr |>
   filter(q1_is_sim_study == "yes") |> 
@@ -378,6 +391,8 @@ q2_2_plot <- data_lr |>
 
 q2_2_plot
 ```
+This means that out of the `r n_mentions` studies mentioning missingness, `r n_quantified` studies quantified missingness. 
+
 
 
 
