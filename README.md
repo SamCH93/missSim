@@ -38,7 +38,8 @@ To reproduce the case study, refer to the files in `case-study/`
 * `case-study/carter2019-analysis.html` case study analysis output containing
   also information on computational environment (OS, R, R packages) used to run
   analysis
-* `case-study/figures/` figure outputs used in the paper
+* `case-study/figures/` figure outputs used in the paper (these will be
+  overwritten when rerunning the code)
 
 
 To reproduce the literature review analyses, refer to the files in
@@ -57,7 +58,8 @@ To reproduce the literature review analyses, refer to the files in
 * `literature-review/analysis.html` literature review analysis analysis output
   containing also information on computational environment (OS, R, R packages)
   used to run analysis
-* `literature-review/figures/` figure outputs used in the paper
+* `literature-review/figures/` figure outputs used in the paper (these will be
+  overwritten when rerunning the code)
 * `literature-review/coding-agreement/` quarto files for agreement randomization
   and analysis
   
