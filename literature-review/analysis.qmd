@@ -625,7 +625,7 @@ q3_2_all_count <- q3_2_yes_count + q3_2_unclear_count
 ```
 
 
-If authors report how they dealt with missingness, what justification did they provide for their choice? We filter out one study here where missingness was considered as the outcome, so there is no justification needed. Overall, `r q3_2_all_count` studies reported dealing provided a justification of their choice, including `r q3_2_unclear_count` studies that provided an unclear justification. In the following, we agreed to count NA in `q3_2_method_justification` as no.
+If authors report how they dealt with missingness, what justification did they provide for their choice? We filter out one study here where missingness was considered as the outcome, so there is no justification needed. Overall, `r q3_2_all_count` studies some form of justification of their choice, including `r q3_2_unclear_count` studies that provided an unclear justification. In the following, we agreed to count NA in `q3_2_method_justification` as no.
 
 
 ```{r}
@@ -672,7 +672,7 @@ data_lr |>
 
 #### Q 3.3. Type of Justification
 
-If authors provide a justification for their choice of handling missingness, what type of justification do they provide?
+If authors provide a justification for their choice of handling missingness, what type of justification do they provide? This includes all studies with a clear or unclear justification as long as some form of justification is provided.  
 ```{r}
 q33_plot_max <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
