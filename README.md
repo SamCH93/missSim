@@ -17,6 +17,9 @@ A BibTeX entry is given by
 }
 ```
 
+The preregistered protocol of our literature review can be found at
+<https://doi.org/10.17605/OSF.IO/PMV2J>
+
 ## Reproducing our results
 
 To reproduce the case study, refer to the files in `case-study/`
