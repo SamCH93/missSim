@@ -3,10 +3,10 @@ title: "Handling Missingness, Failures, and Non-Convergence in Simulation Studie
 subtitle: "Literature Review Analysis"
 author: 
  - Samuel Pawel
+ - František Bartoš
  - Björn S. Siepe
  - Anna Lohmann
- - František Bartoš
-date: "19 September 2024"
+date: "26 September 2024"
 format:
   html:
     toc: true
@@ -19,6 +19,10 @@ format:
     fig-height: 4.5
     fig-align: "center"
     embed-resources: true
+    code-links:
+      - text: Source Code
+        icon: file-code
+        href: https://github.com/SamCH93/missSim
 execute:
   message: false
   warning: false
@@ -347,7 +351,6 @@ q2_1_plot
 
 
 
-
 ### Q2.2: Missigness Summary
 
 How are the missing cases summarized? 'Prop.' stands for proportion, so 'prop. (method/condition)' would be the missingness proportion per method and condition.
@@ -393,10 +396,41 @@ q2_2_plot
 ```
 This means that out of the `r n_mentions` studies mentioning missingness, `r n_quantified` studies quantified missingness. 
 
+Or, as a table with percentages as reported in the manuscript:
+```{r}
+data_lr |>
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "yes") |> 
+    mutate(q2_2_missingness_summarized = case_match(q2_2_missingness_summarized,
+       "missing proportion (total)" ~ "prop.",
+       "missing proportion (per method/condition)" ~ "prop. (method/condition)",
+       "max missing proportion (per method/condition)" ~ "max prop. (method/condition)",
+       "missing proportion (per method)" ~ "prop. (method)",
+       "max missing proportion (per method)" ~ "max prop. (method)",
+       "zero missingness" ~ "no missingness",
+       .default = q2_2_missingness_summarized
+    
+  )) |> 
+  mutate(q2_2_missingness_summarized = fct_infreq(q2_2_missingness_summarized)) |> 
+  count(q2_2_missingness_summarized) |>
+  mutate(percentage = paste0(round(n / sum(n) * 100, 1), "%")) |>
+  rename("Missingness Summary" = q2_2_missingness_summarized) |> 
+  knitr::kable()
+```
 
 
 
 ## Q3: Handling of Missingness
+
+We first decided that studies that explicitly report that no missingness occurred get their own category for question 3:
+```{r}
+data_lr <- data_lr |> 
+    mutate(q3_report_dealing_with_missingness = if_else(q2_2_missingness_summarized == "zero missingness",
+                                                      "yes\n(zero)",
+                                                      q3_report_dealing_with_missingness))
+```
+
+
 
 The following plot shows, conditional on mentioning missingness, how authors reported how they handled missingness.
 
@@ -406,7 +440,8 @@ q3_plot_max <- data_lr |>
   filter(q2_mentions_missingness == "yes") |> 
   group_by(q3_report_dealing_with_missingness) |>
   count() |> 
-  pull(n) * 1.1
+  pull(n) |> 
+  max() * 1.1
 
 q3_plot <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
@@ -420,7 +455,7 @@ q3_plot <- data_lr |>
 q3_plot
 ```
 
-Or, alternatively, with an own category for "missingness not mentioned":
+Or, alternatively, with an own category for "missingness not mentioned".
 ```{r}
 q3_nonmention_plot_max <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
@@ -434,18 +469,20 @@ q3_nonmention_plot_max <- data_lr |>
 q3_nonmention_counts <- data_lr |>
   filter(q1_is_sim_study == "yes") |> 
   mutate(q3_report_dealing_with_missingness = if_else(q2_mentions_missingness == "no", 
-                                                      "not mentioned", 
+                                                      "not\nmentioned", 
                                                       q3_report_dealing_with_missingness)) |> 
+
   count(q3_report_dealing_with_missingness)
 
 
 q3_plot_nonmention <- data_lr |>
-  filter(q1_is_sim_study == "yes") |> 
+  filter(q1_is_sim_study == "yes") |>
   mutate(q3_report_dealing_with_missingness = if_else(q2_mentions_missingness == "no", 
-                                                      "not mentioned", 
+                                                      "not\nmentioned", 
                                                       q3_report_dealing_with_missingness)) |>
   mutate(q3_report_dealing_with_missingness = factor(q3_report_dealing_with_missingness, 
-                                                     levels = c("not mentioned", 
+                                                     levels = c("not\nmentioned", 
+                                                                "yes\n(zero)",
                                                                 "no", 
                                                                 "unclear", 
                                                                 "yes"))) |>  
@@ -464,10 +501,42 @@ q3_plot_nonmention
 ```
 
 
+```{r, echo = FALSE}
+# count number of studies that mention missingness
+q3_yes_count <- q3_nonmention_counts |> 
+  filter(q3_report_dealing_with_missingness == "yes") |> 
+  pull(n)
+
+q3_yeszero_count <- q3_nonmention_counts |> 
+  filter(q3_report_dealing_with_missingness == "yes\n(zero)") |> 
+  pull(n)
+
+q3_yesoverall_count <- q3_yes_count + q3_yeszero_count
+
+```
+
+
+Overall, `r q3_yesoverall_count` studies mentioned missingness and reported how they handled it, including `r q3_yeszero_count` studies that explicitly reported that no missingness occurred. 
+
+
 
 ### Q3.1: Method of Handling Missingness
 
-If authors report how they dealt with missingness, what method did they use?
+```{r, echo = FALSE}
+# calculat number of remaining studies for this figure
+num_left_q31 <- data_lr |>
+  filter(q1_is_sim_study == "yes") |>
+  filter(q2_mentions_missingness == "yes") |>
+  filter(
+    q3_report_dealing_with_missingness == "yes" |
+      q3_report_dealing_with_missingness == "unclear"
+  ) |> 
+  count() |> 
+  pull(n)
+```
+
+
+If authors report how they dealt with missingness, what method did they use? Here, we are looking at `r num_left_q31` studies where missingness occurred and some form of missingness handling was documented, even if it was (partly) unclear.
 
 ```{r}
 q31_plot_max <- data_lr |> 
@@ -505,25 +574,76 @@ q3_1_plot <- data_lr |>
 q3_1_plot
 ```
 
+Alternatively, reported in a table with percentages as reported in the manuscript:
+```{r}
+data_lr |> 
+  filter(q1_is_sim_study == "yes") |>
+  filter(q2_mentions_missingness == "yes") |>
+  filter(q3_report_dealing_with_missingness == "yes" | q3_report_dealing_with_missingness == "unclear") |>
+  # change NA to "other" -> was missingness as outcome
+  mutate(q3_1_method_dealing_with_missingness = if_else(is.na(q3_1_method_dealing_with_missingness), 
+                                                        "other", 
+                                                        q3_1_method_dealing_with_missingness)) |>
+  mutate(q3_1_method_dealing_with_missingness = case_match(q3_1_method_dealing_with_missingness,
+                                                           "additional simulations" ~ "add sims",
+                                                           "method replacement" ~ "replace method",
+                                                           .default = q3_1_method_dealing_with_missingness)) |> 
+  
+  # order q3_1 by frequency
+  mutate(q3_1_method_dealing_with_missingness = fct_infreq(q3_1_method_dealing_with_missingness)) |> 
+  count(q3_1_method_dealing_with_missingness) |> 
+  mutate(percentage = paste0( round(n/sum(n)*100, 1), "%")) |>
+  rename("Method" = q3_1_method_dealing_with_missingness) |>
+  knitr::kable()
+```
+
+
 
 ### Q3.2: Missingness Handling Justification
 
-If authors report how they dealt with missingness, what justification did they provide for their choice?
+```{r, echo = FALSE}
+# count studies that report dealing with missingness
+q3_2_yes_count <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |>
+  filter(q2_mentions_missingness == "yes") |>
+  filter(q3_report_dealing_with_missingness == "yes" | q3_report_dealing_with_missingness == "unclear")  |>
+  filter(!is.na(q3_2_method_justification)) |>
+  filter(q3_2_method_justification == "yes") |> 
+  count() |> 
+  pull(n) 
+
+q3_2_unclear_count <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |>
+  filter(q2_mentions_missingness == "yes") |>
+  filter(q3_report_dealing_with_missingness == "yes" | q3_report_dealing_with_missingness == "unclear") |>
+  filter(!is.na(q3_2_method_justification)) |>
+  filter(q3_2_method_justification == "unclear") |> 
+  count() |> 
+  pull(n)
+
+q3_2_all_count <- q3_2_yes_count + q3_2_unclear_count
+```
+
+
+If authors report how they dealt with missingness, what justification did they provide for their choice? We filter out one study here where missingness was considered as the outcome, so there is no justification needed. Overall, `r q3_2_all_count` studies reported dealing provided a justification of their choice, including `r q3_2_unclear_count` studies that provided an unclear justification. In the following, we agreed to count NA in `q3_2_method_justification` as no.
+
 
 ```{r}
 q32_plot_max <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
   filter(q2_mentions_missingness == "yes") |> 
-  filter(q3_report_dealing_with_missingness == "yes") |> 
+  filter(q3_report_dealing_with_missingness == "yes" | q3_report_dealing_with_missingness == "unclear") |> 
   group_by(q3_2_method_justification) |>
   count() |> 
   pull(n) |> 
-  max() * 1.1
+  max() * 1.4
 
 q3_2_plot <- data_lr |> 
   filter(q1_is_sim_study == "yes") |>
   filter(q2_mentions_missingness == "yes") |>
-  filter(q3_report_dealing_with_missingness == "yes") |>
+  filter(q3_report_dealing_with_missingness == "yes" | q3_report_dealing_with_missingness == "unclear") |>
+    mutate(q3_2_method_justification = if_else(is.na(q3_2_method_justification), "no", 
+                                             q3_2_method_justification)) |>
   ggplot(aes(x = q3_2_method_justification, fill = journal, group = journal))+
     geom_bar(col = 1)+
     labs(x = "Missingness Handling Justified", y = "Number of Studies", fill = "Journal")+
@@ -532,6 +652,22 @@ q3_2_plot <- data_lr |>
     theme(panel.grid.major.x = element_blank())
 q3_2_plot
 ```
+
+
+Again, a table with percentages:
+```{r}
+data_lr |> 
+  filter(q1_is_sim_study == "yes") |>
+  filter(q2_mentions_missingness == "yes") |>
+  filter(q3_report_dealing_with_missingness == "yes" | q3_report_dealing_with_missingness == "unclear") |>
+  mutate(q3_2_method_justification = if_else(is.na(q3_2_method_justification), "no", 
+                                             q3_2_method_justification)) |>
+  count(q3_2_method_justification) |> 
+  mutate(percentage = paste0( round(n/sum(n)*100, 1), "%")) |>
+  rename("Justification" = q3_2_method_justification) |>
+  knitr::kable()
+```
+
 
 
 #### Q 3.3. Type of Justification
@@ -561,6 +697,20 @@ q3_3_plot <- data_lr |>
 
 q3_3_plot
 ```
+
+As a table:
+```{r}
+data_lr |> 
+  filter(q1_is_sim_study == "yes") |>
+  filter(q2_mentions_missingness == "yes") |>
+  filter(q3_report_dealing_with_missingness == "yes" | q3_report_dealing_with_missingness == "unclear") |>
+  filter(!is.na(q3_3_type_justification)) |> 
+  count(q3_3_type_justification) |> 
+  mutate(percentage = paste0( round(n/sum(n)*100, 1), "%")) |>
+  rename("Justification Type" = q3_3_type_justification) |>
+  knitr::kable()
+```
+
 
 
 ## Q4: Code Availability
@@ -664,11 +814,16 @@ q1_plot_pub <- data_lr |>
 q3_nonmention_plot_max_pub <- q3_nonmention_plot_max * 1.1
 q3_plot_nonmention_pub <- data_lr |>
   filter(q1_is_sim_study == "yes") |> 
-  mutate(q3_report_dealing_with_missingness = if_else(q2_mentions_missingness == "no", 
-                                                      "not mentioned", 
+  mutate(q3_report_dealing_with_missingness = if_else(q2_2_missingness_summarized == "zero missingness",
+                                                      "yes\n(zero)",
                                                       q3_report_dealing_with_missingness)) |>
+  mutate(q3_report_dealing_with_missingness = if_else(q2_mentions_missingness == "no", 
+                                                      "not\nmentioned", 
+                                                      q3_report_dealing_with_missingness)) |>
+
   mutate(q3_report_dealing_with_missingness = factor(q3_report_dealing_with_missingness, 
-                                                     levels = c("not mentioned", 
+                                                     levels = c("not\nmentioned", 
+                                                                "yes\n(zero)",
                                                                 "no", 
                                                                 "unclear", 
                                                                 "yes"))) |>  
@@ -689,9 +844,9 @@ q3_plot_nonmention_pub <- data_lr |>
                              labs(x = NULL,
                                   y = NULL,
                                   title = "Missingness handling reported?")+
-  ggpubr::geom_bracket(xmin = 1.75, xmax = 4.25, 
+  ggpubr::geom_bracket(xmin = 1.75, xmax = 5.25, 
                inherit.aes = FALSE, label = "If mentioned",
-               y.position = 130, label.size = 5.8)
+               y.position = 135, label.size = 5.8)
 
 
 # obtain counts for plotting
@@ -855,6 +1010,8 @@ data_lr |>
   pivot_wider(names_from = answer, values_from = n) |> 
   select(question, journal, everything()) |> 
   arrange(question) |> 
+  # knitr has issues with \n in table headers
+  rename("yes (zero)" = "yes\n(zero)") |>
   mutate(question = case_when(
     question == "q1_is_sim_study" ~ "Q1: Is a simulation study?",
     question == "q2_mentions_missingness" ~ "Q2: Mention missingness?",

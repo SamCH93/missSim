@@ -45,6 +45,14 @@ all_res <- subset(all_res, !c(doi == "https://doi.org/10.1037/met0000420" & revi
 # Filter out duplicates (one reviewer accidentally coded the wrong issue)
 all_res <- subset(all_res, !c(journal == "PM" & reviewer == "AL" & year == "2021" & issue == "5"))
 
+# Q2: Resolve inconsistency in one rating after discussions
+# instead of no missingness, we code as not quantified, because
+# a limited few repetitions were apparently repeated
+all_res <- all_res |> 
+  mutate(q2_2_missingness_summarized = if_else(doi == "https://doi.org/10.1037/met0000381", 
+                                              "not quantified", 
+                                              q2_2_missingness_summarized))
+
 # Fix data structure -----------------------------------------------------
 # Remove columns not used in the analyses
 # only the general comments column for now
@@ -77,6 +85,8 @@ sim_res |>
   # select columns that show different places of missingness mentioning
   select(reviewer, doi, q2_2_missingness_summarized) |> 
   filter(is.na(q2_2_missingness_summarized))
+
+
 
 
 # Q3: studies that mention missingness should mention how it handled
@@ -126,6 +136,7 @@ sim_res |>
   filter(is.na(q4_code_available))
 
 
+
 # Reformat and save -------------------------------------------------------
 # Reformat most cols to factor
 # non_factor_vars <- c("year", "issue", "doi")
@@ -164,17 +175,6 @@ sim_res <- sim_res |>
 writexl::write_xlsx(sim_res, path = here("data/sim_res.xlsx"))
 saveRDS(sim_res, file = here("data/sim_res.RDS"))
 
-# LEGACY CODE
-# # Alternative: delete strings from some columns, convert these to numeric
-# numeric_vars <- c("nsimstudies_q2", "nconds_q6", "q7", "q8", "q11", "q14")
-# 
-# # Remove everything but digits
-# sim_res_num <- sim_res_fac |> 
-#   mutate(across(contains(numeric_vars),
-#          ~ as.numeric(stringr::str_extract(., "\\d+"))))
-# 
-# # Save data
-# writexl::write_xlsx(sim_res_num, path = here("data/sim_res_num.xlsx"))
-# saveRDS(sim_res_num, file = here("data/sim_res_num.RDS"))
+
 
 
