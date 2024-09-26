@@ -735,6 +735,20 @@ q4_plot <- data_lr |>
 q4_plot
 ```
 
+```{r, echo=FALSE}
+# code availability in percentage
+code_available_pct <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  count(q4_code_available) |> 
+  mutate(percentage = paste0( round(n/sum(n)*100, 1), "%")) |> 
+  filter(q4_code_available == "yes") |>
+  pull(percentage)
+```
+
+
+This means that, overall, `r code_available_pct` of the simulation studies provided code.
+
+
 The same, but per journal:
 ```{r}
 # compute raw numbers and proportions
@@ -769,6 +783,22 @@ q4_plot_prop <- data_lr |>
              inherit.aes = FALSE)
 q4_plot_prop
 ```
+
+Or as a table with percentages:
+
+```{r}
+data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  count(journal, q4_code_available) |> 
+  group_by(journal) |> 
+  mutate(prop = n/sum(n)) |> 
+  mutate(percentage = paste0(round(prop*100, 1), "%")) |> 
+  select(!prop) |> 
+  rename("Code Availability" = q4_code_available) |> 
+  knitr::kable()
+``` 
+
+
 
 # Combined Plots for Manuscript
 
