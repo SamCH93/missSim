@@ -2,7 +2,7 @@
 
 This repository contains data, code, and output related to the paper
 
-> Pawel, S., Bartoš, F., Siepe, B. S., Lohmann, A. (2024). Handling Missingness, Failures, and Non-Convergence in Simulation Studies: A Review of Current Practices and Recommendations. <https://doi.org/10.48550/arXiv.TODO>
+> Pawel, S., Bartoš, F., Siepe, B. S., Lohmann, A. (2024). Handling Missingness, Failures, and Non-Convergence in Simulation Studies: A Review of Current Practices and Recommendations. <https://github.com/SamCH93/missSim>
 
   
 A BibTeX entry is given by
@@ -12,7 +12,7 @@ A BibTeX entry is given by
   year = {2024},
   author = {Samuel Pawel and Franti{\v{s}}ek Barto{\v{s}} and Bj{\"o}rn S. Siepe and Anna Lohmann},
   title = {Handling Missingness, Failures, and Non-Convergence in Simulation Studies: A Review of Current Practices and Recommendations},
-  url = {https://doi.org/10.48550/arXiv.TODO},
+  url = {https://github.com/SamCH93/missSim},
   note = {Preprint}
 }
 ```
