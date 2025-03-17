@@ -62,7 +62,8 @@ plotA <- carter2019summaries |>
     labs(x = "Method", y = "Condition-wise\nnon-convergence rate") +
     theme_bw() +
     theme(panel.grid.minor = element_blank(),
-          panel.grid.major = element_line(linetype = "dashed"))
+          panel.grid.major = element_line(linetype = "dashed"),
+          axis.title.y = element_text(size = rel(0.9)))
 
 ## marginal summaries per variable
 vars <- c("tau", "k", "delta", "qrpEnv", "censor")
@@ -129,6 +130,8 @@ plotC <- ggdraw(add_sub(plotC1, bquote("Condition-wise non-convergence rate"),
 plot_grid(plotA, plotC, ncol = 1, rel_heights = c(1, 4.5), labels = c("A", "B"))
 ggsave(filename = here("case-study/figures/fig-carter-exploring-missingness.pdf"),
        width = 8.5, height = 10, scale = 1.025)
+ggsave(filename = here("case-study/figures/fig-carter-exploring-missingness.png"),
+       width = 8.5, height = 10, scale = 1.025, dpi = 400)
 ```
 
 
@@ -238,6 +241,8 @@ ggplot(data = carter2019summarieslong,
         legend.text = element_text(size = rel(1.025)))
 ggsave(here("case-study/figures/fig-carter-handling-missingness.pdf"),
        width = 8, height = 5, scale = 0.9)
+ggsave(here("case-study/figures/fig-carter-handling-missingness.png"),
+       width = 8, height = 5, scale = 0.9, dpi = 1000)
 ```
 
 # Session Info
