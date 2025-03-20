@@ -983,6 +983,102 @@ q4_plot_prop_pub <- data_lr |>
 ```
 
 
+For the first revision, we change the first and last part of the plot to show absolut numbers instead of proportions, and add the total number of studies as a label: 
+```{r}
+# slightly hacky to get colors in correct order
+cols_rev <- unname(cols)
+cols_rev <- cols_rev[c(4,2,3,1)]
+
+# get counts
+q1_rev_plot_counts <- data_lr |> 
+  count(journal, q1_is_sim_study) |> 
+  # filter(q1_is_sim_study == "yes") |> 
+  # add overall count to each journal
+  group_by(journal) |> 
+  mutate(n_journal = sum(n)) |> 
+  ungroup() |> 
+  mutate(journal = as.factor(paste(journal, "\n(n = ", n_journal, ")", sep = ""))) |> 
+  filter(q1_is_sim_study == "yes")
+
+
+q1_plot_rev1 <- data_lr |> 
+  add_count(journal) |> 
+  filter(q1_is_sim_study != "unclear") |> 
+  filter(q1_is_sim_study != "no") |> 
+  # add the count to the x axis label (journal column)
+  mutate(journal = as.factor(paste(journal, "\n(n = ", n, ")", sep = ""))) |> 
+  ggplot(aes(x = journal, 
+             fill = journal)) +
+  geom_bar(col = 1) +
+    labs(x = NULL, 
+         title ="Number of simulation studies per journal", 
+         fill = "Journal") +
+   # slightly hacky to get colors in correct order
+    scale_fill_manual(values = cols_rev) +
+    scale_alpha_manual(values = c(0.25, 1), guide = "none") +
+    scale_y_continuous(limits = c(0,210), expand = c(0,0)) +
+    theme(panel.grid.major.x = element_blank(),
+          legend.position = "none",
+          text = element_text(size = 17.5))+
+    labs(y = NULL)+
+    # add counts to the bars
+    geom_text(data = q1_rev_plot_counts, 
+              aes(x = journal, y = n, label = n), 
+              size = 5.8, 
+              inherit.aes = FALSE, vjust = -0.5)+
+    theme(legend.position = "none",
+          text = element_text(size = 18),
+                                  axis.text.x = element_text(size = 18),
+                                  axis.text.y = element_text(size = 18),
+          axis.title.y = element_text(size = 16))
+    
+
+
+
+q4_counts_rev <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  count(journal, q4_code_available) |>
+  group_by(journal) |> 
+  mutate(n_journal = sum(n)) |> 
+  ungroup() |> 
+  # select(!n) |> 
+  filter(q4_code_available == "yes") |> 
+  rename(n_code = n) |> 
+  mutate(journal = as.factor(paste(journal, "\n(n = ", n_journal, ")", sep = "")))
+
+q4_plot_rev1 <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |>
+  add_count(journal) |> 
+  filter(!is.na(q4_code_available)) |>
+  filter(q4_code_available == "yes") |> 
+  mutate(journal = as.factor(paste(journal, "\n(n = ", n, ")", sep = "")) ) |>
+  ggplot(aes(x = journal, fill = journal))+
+  geom_bar(col = 1)+
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(0,100), expand = c(0,0)) +
+  labs(x = "Journal", y = "Number of Studies with Code", fill = "Journal:")+
+  scale_fill_manual(values = cols_rev) +
+   geom_text(data = q4_counts_rev,
+             aes(x = journal,
+                 y = n_code,
+                 label = n_code),
+             vjust = -0.5,
+             size = 5.8,
+             inherit.aes = FALSE)+
+    theme(legend.position = "none",
+          text = element_text(size = 18),
+                                  axis.text.x = element_text(size = 18),
+                                  axis.text.y = element_text(size = 18),
+          axis.title.y = element_text(size = 16))+
+    labs(x = NULL,
+         y = NULL,
+         title = "Code for simulation study available?")+
+  theme(panel.background = element_rect(colour = "#F3F4F5"))
+```
+
+
+
+
 ## Combine into one plot
 Combine plots for Q2 (Mention of Missingness per Journal), Q3 (Handling of Missingness per Journal) Q3.1 (Method of Handling Missingness per Journal), Q4 (Code availability):
 ```{r}
@@ -999,10 +1095,10 @@ legend <- cowplot::get_plot_component(leg_plot, 'guide-box-top', return_all = TR
 
 # combine plots
 # only use one legend for all plots
-p_c <- cowplot::plot_grid(q1_plot_pub, 
+p_c <- cowplot::plot_grid(q1_plot_rev1, 
                           q3_plot_nonmention_pub, 
                            q3_1_plot_pub,
-                           q4_plot_prop_pub,
+                           q4_plot_rev1,
                    nrow = 2, labels = c("A", "B", "C", "D"), label_size = 18,
                    align = "h",
                    scale = 0.95)
@@ -1022,7 +1118,7 @@ p_c_leg
 
 Save plots:
 ```{r, eval = FALSE}
-ggsave(here("literature-review/figures/fig_lit_review_results.pdf"), p_c_leg, width = 15*0.76, height = 10*0.76)
+ggsave(here("literature-review/figures/fig_lit_review_results_rev1.pdf"), p_c_leg, width = 15*0.76, height = 10*0.76)
 ```
 
  
