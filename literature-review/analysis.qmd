@@ -808,16 +808,22 @@ First, slightly tweak the plots for the combined figure:
 # get some counts
 q1_plot_counts <- data_lr |> 
   count(journal, q1_is_sim_study) |> 
-  # filter(q1_is_sim_study == "yes") |> 
   group_by(journal) |> 
-  mutate(prop = n/sum(n))
+  mutate(prop = n/sum(n)) |> 
+  filter(q1_is_sim_study == "yes") |> 
+  ungroup()
 
 q1_plot_pub <- data_lr |> 
   filter(q1_is_sim_study != "unclear") |> 
-  ggplot(aes(x = journal, fill = journal, alpha = q1_is_sim_study)) +
-    geom_bar(col = 1, position = "fill") +
+  count(journal, q1_is_sim_study) |>
+  group_by(journal) |> 
+  mutate(prop = n/sum(n)) |> 
+  ungroup() |> 
+  filter(q1_is_sim_study == "yes") |> 
+  ggplot(aes(x = journal, y = prop, fill = journal)) +
+    geom_col(col = 1) +
     labs(x = NULL, 
-         title ="Number of simulation studies per journal", 
+         title ="Simulation studies per journal", 
          fill = "Journal") +
     # add raw numbers
     geom_text(data = q1_plot_counts, 
@@ -830,7 +836,7 @@ q1_plot_pub <- data_lr |>
                                   axis.title.y = element_text(size = 16))+
     # scale_fill_discrete_qualitative(palette = pal) + 
     scale_fill_manual(values = cols) +
-    scale_alpha_manual(values = c(0.25, 1), guide = "none") +
+    # scale_alpha_manual(values = c(0.25, 1), guide = "none") +
       scale_y_continuous(labels = scales::percent_format(),
                      limits = c(0,1), expand = c(0,0)) +
     theme(panel.grid.major.x = element_blank(),
@@ -952,18 +958,32 @@ q3_1_plot_pub <- data_lr |>
 
 
 
+q4_counts_pub <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(!is.na(q4_code_available)) |>
+  group_by(journal, q4_code_available) |>
+  count() |> 
+  group_by(journal) |> 
+  mutate(prop = n/sum(n)) |> 
+  filter(q4_code_available == "yes")
+
 q4_plot_prop_pub <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
   filter(!is.na(q4_code_available)) |>
-  ggplot(aes(alpha = q4_code_available, x = journal, fill = journal))+
-    geom_bar(col = 1, position = "fill")+
+  count(journal, q4_code_available) |> 
+  group_by(journal) |> 
+  mutate(prop = n/sum(n)) |> 
+  ungroup() |> 
+  filter(q4_code_available == "yes") |> 
+  ggplot(aes(x = journal, y = prop, fill = journal))+
+    geom_col(col = 1)+
   theme(legend.position = "none") + 
-   scale_alpha_manual(values = c(0.25, 1), guide = "none") +
+   # scale_alpha_manual(values = c(0.25, 1), guide = "none") +
   scale_y_continuous(labels = scales::percent_format(),
                      limits = c(0,1), expand = c(0,0)) +
     labs(x = "Journal", y = "Proportion of Studies with Code", fill = "Journal:")+
     scale_fill_manual(values = cols) +
-   geom_text(data = q4_counts, 
+   geom_text(data = q4_counts_pub, 
              aes(x = journal,
                  y = prop, 
                  group = q4_code_available,
@@ -983,7 +1003,7 @@ q4_plot_prop_pub <- data_lr |>
 ```
 
 
-For the first revision, we change the first and last part of the plot to show absolut numbers instead of proportions, and add the total number of studies as a label: 
+For the first revision, we tried to change the first and last part of the plot to show absolut numbers instead of proportions, and add the total number of studies as a label. However, in the end, we kept the original proportion plot, but removed the shaded "no" area.
 ```{r}
 # slightly hacky to get colors in correct order
 cols_rev <- unname(cols)
@@ -1095,10 +1115,10 @@ legend <- cowplot::get_plot_component(leg_plot, 'guide-box-top', return_all = TR
 
 # combine plots
 # only use one legend for all plots
-p_c <- cowplot::plot_grid(q1_plot_rev1, 
+p_c <- cowplot::plot_grid(q1_plot_pub, 
                           q3_plot_nonmention_pub, 
                            q3_1_plot_pub,
-                           q4_plot_rev1,
+                           q4_plot_prop_pub,
                    nrow = 2, labels = c("A", "B", "C", "D"), label_size = 18,
                    align = "h",
                    scale = 0.95)
