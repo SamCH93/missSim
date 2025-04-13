@@ -805,13 +805,19 @@ data_lr |>
 ## Tweak existing plots
 First, slightly tweak the plots for the combined figure:
 ```{r}
-# get some counts
-q1_plot_counts <- data_lr |> 
-  count(journal, q1_is_sim_study) |> 
-  group_by(journal) |> 
-  mutate(prop = n/sum(n)) |> 
+# studies per journal (excluding "unclear")
+q1_totals <- data_lr |> 
+  filter(q1_is_sim_study != "unclear") |> 
+  count(journal, name = "total")
+
+q1_sim_counts <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
-  ungroup()
+  count(journal, name = "sim")
+
+q1_labels <- left_join(q1_sim_counts, q1_totals, by = "journal") |> 
+  mutate(label = paste0(sim, "/", total),
+         prop = sim / total)
+
 
 q1_plot_pub <- data_lr |> 
   filter(q1_is_sim_study != "unclear") |> 
@@ -826,9 +832,9 @@ q1_plot_pub <- data_lr |>
          title ="Simulation studies per journal", 
          fill = "Journal") +
     # add raw numbers
-    geom_text(data = q1_plot_counts, 
-              aes(x = journal, y = prop, label = n, group = q1_is_sim_study), 
-              size = 5.8, inherit.aes = FALSE, position = position_stack(vjust = 0.5)) + 
+  geom_text(data = q1_labels, 
+          aes(x = journal, y = prop, label = label), 
+          size = 5.8, inherit.aes = FALSE, position = position_stack(vjust = 0.5))+ 
                              theme(legend.position = "none",
                                   text = element_text(size = 18),
                                   axis.text.x = element_text(size = 18),
@@ -846,7 +852,12 @@ q1_plot_pub <- data_lr |>
 
 
 
-
+q3_nonmention_plot_max <- data_lr |> 
+  filter(q1_is_sim_study == "yes") |> 
+  filter(q2_mentions_missingness == "no") |> 
+  count() |> 
+  pull(n) |> 
+  max() * 1.1
 q3_nonmention_plot_max_pub <- q3_nonmention_plot_max * 1.1
 q3_plot_nonmention_pub <- data_lr |>
   filter(q1_is_sim_study == "yes") |> 
@@ -958,14 +969,20 @@ q3_1_plot_pub <- data_lr |>
 
 
 
-q4_counts_pub <- data_lr |> 
+# sim studies with known code availability per journal
+q4_totals <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
-  filter(!is.na(q4_code_available)) |>
-  group_by(journal, q4_code_available) |>
-  count() |> 
-  group_by(journal) |> 
-  mutate(prop = n/sum(n)) |> 
-  filter(q4_code_available == "yes")
+  filter(!is.na(q4_code_available)) |> 
+  count(journal, name = "total")
+
+q4_code_yes <- data_lr |> 
+  filter(q1_is_sim_study == "yes", q4_code_available == "yes") |> 
+  count(journal, name = "yes_count")
+
+q4_labels <- left_join(q4_code_yes, q4_totals, by = "journal") |> 
+  mutate(label = paste0(yes_count, "/", total),
+         prop = yes_count / total)
+
 
 q4_plot_prop_pub <- data_lr |> 
   filter(q1_is_sim_study == "yes") |> 
@@ -983,14 +1000,11 @@ q4_plot_prop_pub <- data_lr |>
                      limits = c(0,1), expand = c(0,0)) +
     labs(x = "Journal", y = "Proportion of Studies with Code", fill = "Journal:")+
     scale_fill_manual(values = cols) +
-   geom_text(data = q4_counts_pub, 
-             aes(x = journal,
-                 y = prop, 
-                 group = q4_code_available,
-                 label = n), 
-             position = position_stack(vjust = 0.5), 
-             size = 5.8,
-             inherit.aes = FALSE)+
+   geom_text(data = q4_labels, 
+          aes(x = journal, y = prop, label = label), 
+          position = position_stack(vjust = 0.5), 
+          size = 5.8,
+          inherit.aes = FALSE)+
     theme(legend.position = "none",
           text = element_text(size = 18),
                                   axis.text.x = element_text(size = 18),
