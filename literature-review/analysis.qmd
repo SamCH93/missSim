@@ -804,6 +804,8 @@ data_lr |>
 
 ## Tweak existing plots
 First, slightly tweak the plots for the combined figure:
+
+During the revision of the manuscript, thanks to the helpful comment of a reviewer, we renamed "case-wise" and "list-wise" deletion to "method-wise" and "repetition-wise" deletion, respectively. 
 ```{r}
 # studies per journal (excluding "unclear")
 q1_totals <- data_lr |> 
@@ -833,7 +835,7 @@ q1_plot_pub <- data_lr |>
          fill = "Journal") +
     # add raw numbers
   geom_text(data = q1_labels, 
-          aes(x = journal, y = prop, label = label), 
+          aes(x = journal, y = prop/2, label = label), 
           size = 5.8, inherit.aes = FALSE, position = position_stack(vjust = 0.5))+ 
                              theme(legend.position = "none",
                                   text = element_text(size = 18),
@@ -913,8 +915,8 @@ q3_1_plot_counts <- data_lr |>
       q3_1_method_dealing_with_missingness,
       "additional simulations" ~ "add sims",
       "method replacement" ~ "replace",
-      "case-wise deletion" ~ "case- wise",
-      "list-wise deletion" ~ "list- wise",
+      "case-wise deletion" ~ "method- wise",
+      "list-wise deletion" ~ "repetition- wise",
       .default = q3_1_method_dealing_with_missingness
     )
   ) |>
@@ -939,8 +941,8 @@ q3_1_plot_pub <- data_lr |>
       q3_1_method_dealing_with_missingness,
       "additional simulations" ~ "add sims",
       "method replacement" ~ "replace",
-      "case-wise deletion" ~ "case- wise",
-      "list-wise deletion" ~ "list- wise",
+      "case-wise deletion" ~ "method- wise",
+      "list-wise deletion" ~ "repetition- wise",
       .default = q3_1_method_dealing_with_missingness
     )
   ) |> 
@@ -1001,7 +1003,7 @@ q4_plot_prop_pub <- data_lr |>
     labs(x = "Journal", y = "Proportion of Studies with Code", fill = "Journal:")+
     scale_fill_manual(values = cols) +
    geom_text(data = q4_labels, 
-          aes(x = journal, y = prop, label = label), 
+          aes(x = journal, y = prop/2, label = label), 
           position = position_stack(vjust = 0.5), 
           size = 5.8,
           inherit.aes = FALSE)+
@@ -1152,7 +1154,7 @@ p_c_leg
 
 Save plots:
 ```{r, eval = FALSE}
-ggsave(here("literature-review/figures/fig_lit_review_results_rev1.pdf"), p_c_leg, width = 15*0.76, height = 10*0.76)
+ggsave(here("literature-review/figures/fig_lit_review_results_rev2.pdf"), p_c_leg, width = 15*0.76, height = 10*0.76)
 ```
 
  
