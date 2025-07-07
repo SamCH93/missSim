@@ -43,14 +43,14 @@ load(here("case-study/carter2019.rda"))
 #| fig.height = 12
 methodlevels <- c("RE", "WAAP-WLS", "PET-PEESE", "TF", "3PSM", "p-curve",
                   "p-uniform")
-carter2019$missingcase <- is.na(carter2019$b0_estimate)
+carter2019$missingmethod <- is.na(carter2019$b0_estimate)
 carter2019summaries <- carter2019 |>
   mutate(k = factor(k),
          delta = factor(delta),
          tau = factor(tau),
          method = factor(method, levels = methodlevels)) |>
   group_by(method, k, delta, tau, qrpEnv, censor) |>
-  summarise(missing = mean(missingcase)) |>
+  summarise(missing = mean(missingmethod)) |>
   ungroup()
 
 plotA <- carter2019summaries |>
@@ -169,7 +169,7 @@ ggsave(filename = here("case-study/figures/fig-carter-exploring-missingness2.png
 ```
 
 
-# Case-wise deletion vs. list-wise deletion vs. baseline replacement -- how does it change type I error rate?
+# Method-wise deletion vs. repetition-wise deletion vs. baseline replacement -- how does it change type I error rate?
 
 ```{r}
 ## extract baseline method (RE meta-analysis) data
@@ -186,61 +186,64 @@ carter2019summaries <- left_join(carter2019, carter2019rema) |>
          H0.reject.pos.base = ifelse(is.na(H0.reject.pos), H0.reject.posrema,
                                      H0.reject.pos)) |>
   select(-b0_estimaterema, H0.reject.posrema) |>
-  mutate(missingcase = is.na(b0_estimate),
+  mutate(missingmethod = is.na(b0_estimate),
          missingbase = is.na(b0_estimate.base)) |>
   group_by(id) |>
-  mutate(missinglist = any(missingcase)) |>
+  mutate(missingrep = any(missingmethod)) |>
   ungroup() |>
-  mutate(b0_estimate.list = ifelse(missinglist, NA, b0_estimate),
-         H0.reject.pos.list = ifelse(missinglist, NA, H0.reject.pos)) |>
+  mutate(b0_estimate.rep = ifelse(missingrep, NA, b0_estimate),
+         H0.reject.pos.rep = ifelse(missingrep, NA, H0.reject.pos)) |>
   group_by(method, k, delta, tau, qrpEnv, censor) |>
-  summarise(RRcase = mean(H0.reject.pos, na.rm = TRUE),
-            RRlist = mean(H0.reject.pos.list, na.rm = TRUE),
+  summarise(RRmethod = mean(H0.reject.pos, na.rm = TRUE),
+            RRrep = mean(H0.reject.pos.rep, na.rm = TRUE),
             RRbase = mean(H0.reject.pos.base, na.rm = TRUE),
-            RRMCSEcase = sqrt(RRcase*(1 - RRcase)/sum(!missingcase)),
-            RRMCSElist = sqrt(RRlist*(1 - RRlist)/sum(!missinglist)),
+            RRMCSEmethod = sqrt(RRmethod*(1 - RRmethod)/sum(!missingmethod)),
+            RRMCSErep = sqrt(RRrep*(1 - RRrep)/sum(!missingrep)),
             RRMCSEbase = sqrt(RRbase*(1 - RRbase)/sum(!missingbase)),
-            biascase = mean(b0_estimate - delta, na.rm = TRUE),
-            biaslist = mean(b0_estimate.list - delta, na.rm = TRUE),
+            biasmethod = mean(b0_estimate - delta, na.rm = TRUE),
+            biasrep = mean(b0_estimate.rep - delta, na.rm = TRUE),
             biasbase = mean(b0_estimate.base - delta, na.rm = TRUE),
-            biasMCSEcase = sd(b0_estimate, na.rm = TRUE)/sqrt(sum(!missingcase)),
-            biasMCSElist = sd(b0_estimate.list, na.rm = TRUE)/sqrt(sum(!missinglist)),
-            biasMCSEbase = sd(b0_estimate.base, na.rm = TRUE)/sqrt(sum(!missingbase)),
-            missratecase = mean(missingcase),
-            missratelist = mean(missinglist),
+            biasMCSEmethod = sd(b0_estimate, na.rm = TRUE)/
+              sqrt(sum(!missingmethod)),
+            biasMCSErep = sd(b0_estimate.rep, na.rm = TRUE)/
+              sqrt(sum(!missingrep)),
+            biasMCSEbase = sd(b0_estimate.base,na.rm = TRUE)/
+              sqrt(sum(!missingbase)),
+            missratemethod = mean(missingmethod),
+            missraterep = mean(missingrep),
             missratebase = mean(missingbase)) |>
   ungroup() |>
   group_by(k, delta, tau, qrpEnv, censor) |>
   ## when effect = 0, lower RR (T1E) is better, otherwise higher RR (power) is better
-  mutate(RRrankcase = ifelse(delta == 0, rank(RRcase), rank(-RRcase)),
-         RRranklist = ifelse(delta == 0, rank(RRlist), rank(-RRlist)),
+  mutate(RRrankmethod = ifelse(delta == 0, rank(RRmethod), rank(-RRmethod)),
+         RRrankrep = ifelse(delta == 0, rank(RRrep), rank(-RRrep)),
          RRrankbase = ifelse(delta == 0, rank(RRbase), rank(-RRbase)),
-         biasrankcase = rank(abs(biascase)),
-         biasranklist = rank(abs(biaslist)),
+         biasrankmethod = rank(abs(biasmethod)),
+         biasrankrep = rank(abs(biasrep)),
          biasrankbase = rank(abs(biasbase))) |>
   ungroup()
 
 ## wrangle data in long format for plots
 carter2019summarieslong <- carter2019summaries |>
   filter(delta == 0, tau == 0, k == 10, censor == "none") |>
-  pivot_longer(cols = c(RRcase, RRlist, RRbase), names_to = "Type",
+  pivot_longer(cols = c(RRmethod, RRrep, RRbase), names_to = "Type",
                values_to = "RR") |>
-  mutate(RRMCSE =  case_when(Type == "RRcase" ~ RRMCSEcase,
-                             Type == "RRlist" ~ RRMCSElist,
+  mutate(RRMCSE =  case_when(Type == "RRmethod" ~ RRMCSEmethod,
+                             Type == "RRrep" ~ RRMCSErep,
                              TRUE ~ RRMCSEbase),
-         bias = case_when(Type == "RRcase" ~ biascase,
-                          Type == "RRlist" ~ biaslist,
+         bias = case_when(Type == "RRmethod" ~ biasmethod,
+                          Type == "RRrep" ~ biasrep,
                           TRUE ~ biasbase),
-         biasMCSE = case_when(Type == "RRcase" ~ biasMCSEcase,
-                              Type == "RRlist" ~ biasMCSElist,
+         biasMCSE = case_when(Type == "RRmethod" ~ biasMCSEmethod,
+                              Type == "RRrep" ~ biasMCSErep,
                               TRUE ~ biasMCSEbase),
-         missrate =  case_when(Type == "RRcase" ~ missratecase,
-                               Type == "RRlist" ~ missratelist,
+         missrate =  case_when(Type == "RRmethod" ~ missratemethod,
+                               Type == "RRrep" ~ missraterep,
                                TRUE ~ missratebase),
-         Type = factor(Type, levels = c("RRbase", "RRlist", "RRcase"),
+         Type = factor(Type, levels = c("RRbase", "RRrep", "RRmethod"),
                        labels = c("baseline method (RE) replacement",
-                                  "list-wise deletion",
-                                  "case-wise deletion")),
+                                  "repetition-wise deletion",
+                                  "method-wise deletion")),
          QRP = factor(qrpEnv, levels = c("none", "med", "high"),
                       labels = c("no QRPs environment",
                                  "medium QRPs environment",
@@ -272,7 +275,7 @@ ggplot(data = carter2019summarieslong,
   theme(panel.grid.minor = element_blank(),
         panel.grid.major.y = element_blank(),
         legend.position = "bottom",
-        legend.text = element_text(size = rel(1.025)))
+        legend.text = element_text(size = rel(0.9)))
 ggsave(here("case-study/figures/fig-carter-handling-missingness.pdf"),
        width = 8, height = 5, scale = 0.9)
 ggsave(here("case-study/figures/fig-carter-handling-missingness.png"),
